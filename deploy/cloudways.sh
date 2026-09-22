@@ -42,7 +42,9 @@ if [[ ! -d "$APP_ROOT/public_html" ]]; then
 fi
 if [[ "$MODE" == "install" && -n "$(ls -A "$APP_ROOT/public_html" 2>/dev/null)" ]]; then
   # Cloudways' "Custom App" ships a placeholder site; anything else is treated as a real app.
-  if grep -qiE "cloud hosting|cloudways" "$APP_ROOT/public_html/index.php" "$APP_ROOT/public_html/index.html" 2>/dev/null; then
+  if grep -q "Node.js app started by PM2" "$APP_ROOT/public_html/.htaccess" 2>/dev/null; then
+    echo "public_html already holds a SyncCRM install — continuing as an update."
+  elif grep -qiE "cloud hosting|cloudways" "$APP_ROOT/public_html/index.php" "$APP_ROOT/public_html/index.html" 2>/dev/null; then
     BACKUP="$APP_ROOT/private_html/public_html_placeholder_$(date +%Y%m%d%H%M%S)"
     mkdir -p "$BACKUP"
     mv "$APP_ROOT/public_html/"* "$APP_ROOT/public_html/".[!.]* "$BACKUP"/ 2>/dev/null || true
@@ -104,8 +106,17 @@ pnpm build
 echo "== Apache proxy (.htaccess in public_html)"
 cp deploy/cloudways.htaccess "$APP_ROOT/public_html/.htaccess"
 sed -i "s/__PORT__/$PORT/g" "$APP_ROOT/public_html/.htaccess"
-# A placeholder index keeps Cloudways' health checks quiet if the proxy is ever off.
-[[ -f "$APP_ROOT/public_html/index.html" ]] || echo "SyncCRM" > "$APP_ROOT/public_html/index.html"
+# Cloudways serves any file that exists in public_html straight from nginx, bypassing
+# .htaccess. So public_html must hold no index page (earlier installs wrote one) ...
+if [[ -f "$APP_ROOT/public_html/index.html" ]] && [[ "$(cat "$APP_ROOT/public_html/index.html")" == "SyncCRM" ]]; then
+  rm -f "$APP_ROOT/public_html/index.html"
+fi
+# ... and the build's static assets are published there so nginx can serve them directly.
+rm -rf "$APP_ROOT/public_html/_next"
+mkdir -p "$APP_ROOT/public_html/_next"
+cp -r .next/static "$APP_ROOT/public_html/_next/static"
+cp -r public/. "$APP_ROOT/public_html/"
+cp src/app/icon.png "$APP_ROOT/public_html/icon.png"
 
 echo "== Start with PM2"
 pm2 delete synccrm >/dev/null 2>&1 || true

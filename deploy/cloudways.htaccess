@@ -1,6 +1,8 @@
 # Forward every request from Apache to the Node.js app started by PM2.
+# (Cloudways: nginx serves files that exist in public_html itself; everything else reaches this file.)
 RewriteEngine On
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 RewriteRule ^(.*)$ http://127.0.0.1:__PORT__/$1 [P,L]
 ProxyPreserveHost On

@@ -2,7 +2,7 @@
 
 Cloudways is a PHP-oriented platform: no root access, no Docker and no PostgreSQL. SyncCRM still runs there with this layout:
 
-- **App** — Node.js 22 installed with nvm in the application's SSH user home, run by PM2 on port 3000, with Apache forwarding traffic via `.htaccess`.
+- **App** — Node.js 22 installed with nvm in the application's SSH user home, run by PM2 on the first free port from 3000 up, with Apache forwarding traffic via `.htaccess`. The build's static assets (`_next/static`, `public/`) are copied into `public_html` because Cloudways' nginx serves files that exist there directly and only passes the rest to Apache.
 - **Database** — a managed PostgreSQL outside Cloudways (Neon, Supabase, DigitalOcean Managed DB, etc.). Cloudways servers reach it over SSL.
 - **Files** — uploads stay on the Cloudways disk under `private_html/synccrm/uploads`.
 
@@ -11,7 +11,7 @@ Cloudways is a PHP-oriented platform: no root access, no Docker and no PostgreSQ
 1. Applications → **Add Application** → type **Custom App** (PHP), name `synccrm`.
 2. Application → **Domain Management** → add your domain (e.g. `crm.syncworkstech.com`) and point its DNS at the server IP.
 3. Application → **SSL Certificate** → Let's Encrypt for that domain.
-4. Application → **Application Settings** → set **Varnish** to *Disabled* (authenticated pages must never be cached).
+4. Application → **Application Settings** → **General** tab → set **Varnish** to *Disabled* (authenticated pages must never be cached). If that tab has no Varnish switch, open the **Varnish** tab and add an exclusion: Type *URL*, Method *Contains*, Value `/`.
 5. Application → **Access Details** → note the **SSH/SFTP username, password, server IP** and the application folder name.
 6. Server → **Security** → allow your IP for SSH if it is restricted.
 
@@ -57,6 +57,7 @@ ssh <ssh-user>@<server-ip>
 ## Troubleshooting
 
 - **500 / "Proxy Error" from Apache** — `mod_proxy` is not enabled on that server. Ask Cloudways support to enable `mod_proxy` and `mod_proxy_http` for the application (they do this on request), then reload the page.
-- **Stale pages after login/logout** — Varnish is still on; disable it in Application Settings and purge.
+- **Stale pages after login/logout** — Varnish is still on; disable it in Application Settings → General (or add a URL exclusion for `/` on the Varnish tab) and purge.
+- **The page only shows the word "SyncCRM" or a Cloudways placeholder** — a static `index.html`/`index.php` is sitting in `public_html`, and nginx serves it before Apache's proxy rule runs. Remove it (`rm ~/applications/<app>/public_html/index.html`) or rerun the installer's `update`, which does this for you.
 - **App not running** — `pm2 logs synccrm` shows the reason; `pm2 restart synccrm` restarts it. The watchdog cron does the same automatically.
 - **Database connection refused** — the Postgres provider must allow connections from the Cloudways server IP (Neon allows all by default; others need an allow-list).
