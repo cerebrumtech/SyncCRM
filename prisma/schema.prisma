@@ -1,0 +1,512 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+enum EntityType {
+  CONTACT
+  COMPANY
+  DEAL
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  CHECKBOX
+}
+
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum ActivityType {
+  TASK
+  CALL
+  EVENT
+}
+
+enum ActivityStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum Recurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  timezone  String   @default("Asia/Kolkata")
+  currency  String   @default("INR")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  invites      Invite[]
+  teams        Team[]
+  companies    Company[]
+  contacts     Contact[]
+  pipelines    Pipeline[]
+  deals        Deal[]
+  products     Product[]
+  activities   Activity[]
+  notes        Note[]
+  attachments  Attachment[]
+  customFields CustomFieldDefinition[]
+  savedViews   SavedView[]
+  auditLogs    AuditLog[]
+  tags         Tag[]
+  shares       RecordShare[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  orgId        String
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(MEMBER)
+  isActive     Boolean   @default(true)
+  color        String    @default("#0068FF")
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions        Session[]
+  teamMemberships TeamMember[]
+  sentInvites     Invite[]      @relation("InvitedBy")
+  ownedCompanies  Company[]     @relation("CompanyOwner")
+  ownedContacts   Contact[]     @relation("ContactOwner")
+  ownedDeals      Deal[]        @relation("DealOwner")
+  activities      Activity[]    @relation("ActivityAssignee")
+  createdActivities Activity[]  @relation("ActivityCreator")
+  notes           Note[]
+  attachments     Attachment[]
+  savedViews      SavedView[]
+  auditLogs       AuditLog[]
+  shares          RecordShare[]
+
+  @@index([orgId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invite {
+  id          String       @id @default(cuid())
+  orgId       String
+  email       String
+  role        Role         @default(MEMBER)
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invitedBy User         @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([orgId, email])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  createdAt DateTime @default(now())
+
+  org     Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members TeamMember[]
+  shares  RecordShare[]
+
+  @@unique([orgId, name])
+}
+
+model TeamMember {
+  teamId String
+  userId String
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+}
+
+model RecordShare {
+  id       String     @id @default(cuid())
+  orgId    String
+  entity   EntityType
+  entityId String
+  userId   String?
+  teamId   String?
+  canEdit  Boolean    @default(false)
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, entity, entityId])
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  orgId String
+  name  String
+  color String @default("#EBF3FF")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, name])
+}
+
+model Company {
+  id           String   @id @default(cuid())
+  orgId        String
+  name         String
+  industry     String?
+  website      String?
+  phone        String?
+  email        String?
+  addressLine  String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?  @default("India")
+  description  String?
+  tags         String[] @default([])
+  customFields Json     @default("{}")
+  ownerId      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  owner       User?        @relation("CompanyOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  contacts    Contact[]
+  deals       Deal[]
+  activities  Activity[]
+  notes       Note[]
+  attachments Attachment[]
+
+  @@index([orgId, name])
+  @@index([orgId, ownerId])
+}
+
+model Contact {
+  id              String   @id @default(cuid())
+  orgId           String
+  firstName       String
+  lastName        String?
+  email           String?
+  phone           String?
+  phoneNormalized String?
+  whatsappNumber  String?
+  jobTitle        String?
+  companyId       String?
+  tags            String[] @default([])
+  customFields    Json     @default("{}")
+  ownerId         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  owner       User?        @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deals       Deal[]
+  activities  Activity[]
+  notes       Note[]
+  attachments Attachment[]
+
+  @@index([orgId, email])
+  @@index([orgId, phoneNormalized])
+  @@index([orgId, companyId])
+  @@index([orgId, ownerId])
+}
+
+model Pipeline {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  position  Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  stages Stage[]
+  deals  Deal[]
+
+  @@unique([orgId, name])
+}
+
+model Stage {
+  id             String   @id @default(cuid())
+  pipelineId     String
+  name           String
+  position       Int      @default(0)
+  probability    Int      @default(0)
+  isWon          Boolean  @default(false)
+  isLost         Boolean  @default(false)
+  requiredFields String[] @default([])
+  color          String   @default("#0068FF")
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+
+  @@index([pipelineId, position])
+}
+
+model Deal {
+  id                String     @id @default(cuid())
+  orgId             String
+  title             String
+  pipelineId        String
+  stageId           String
+  status            DealStatus @default(OPEN)
+  amount            Decimal    @default(0) @db.Decimal(14, 2)
+  amountIsManual    Boolean    @default(true)
+  expectedCloseDate DateTime?  @db.Date
+  closedAt          DateTime?
+  lostReason        String?
+  contactId         String?
+  companyId         String?
+  ownerId           String?
+  position          Int        @default(0)
+  tags              String[]   @default([])
+  customFields      Json       @default("{}")
+  sourceDealId      String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  org         Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pipeline    Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stage       Stage          @relation(fields: [stageId], references: [id])
+  contact     Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company     Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  owner       User?          @relation("DealOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  sourceDeal  Deal?          @relation("DealHandoff", fields: [sourceDealId], references: [id], onDelete: SetNull)
+  handoffs    Deal[]         @relation("DealHandoff")
+  lineItems   DealLineItem[]
+  activities  Activity[]
+  notes       Note[]
+  attachments Attachment[]
+
+  @@index([orgId, pipelineId, stageId])
+  @@index([orgId, ownerId])
+  @@index([orgId, status])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  sku         String?
+  description String?
+  price       Decimal  @default(0) @db.Decimal(14, 2)
+  taxRate     Decimal  @default(18) @db.Decimal(5, 2)
+  isActive    Boolean  @default(true)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org       Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lineItems DealLineItem[]
+
+  @@unique([orgId, sku])
+  @@index([orgId, isActive])
+}
+
+model DealLineItem {
+  id              String  @id @default(cuid())
+  dealId          String
+  productId       String?
+  name            String
+  quantity        Decimal @default(1) @db.Decimal(12, 2)
+  unitPrice       Decimal @default(0) @db.Decimal(14, 2)
+  discountPercent Decimal @default(0) @db.Decimal(5, 2)
+  taxRate         Decimal @default(0) @db.Decimal(5, 2)
+  total           Decimal @default(0) @db.Decimal(14, 2)
+  position        Int     @default(0)
+
+  deal    Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([dealId])
+}
+
+model Activity {
+  id              String         @id @default(cuid())
+  orgId           String
+  type            ActivityType
+  title           String
+  description     String?
+  status          ActivityStatus @default(OPEN)
+  dueAt           DateTime?
+  endAt           DateTime?
+  allDay          Boolean        @default(false)
+  location        String?
+  recurrence      Recurrence     @default(NONE)
+  recurrenceUntil DateTime?      @db.Date
+  reminderMinutes Int?
+  attendees       String[]       @default([])
+  callDirection   CallDirection?
+  callDurationSec Int?
+  callOutcome     String?
+  assigneeId      String?
+  contactId       String?
+  companyId       String?
+  dealId          String?
+  createdById     String
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  assignee  User?        @relation("ActivityAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy User         @relation("ActivityCreator", fields: [createdById], references: [id])
+  contact   Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company   Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deal      Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, dueAt])
+  @@index([orgId, assigneeId, status])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  orgId     String
+  body      String
+  contactId String?
+  companyId String?
+  dealId    String?
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  author  User         @relation(fields: [authorId], references: [id])
+  contact Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deal    Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  orgId        String
+  filename     String
+  storagePath  String
+  mimeType     String
+  size         Int
+  contactId    String?
+  companyId    String?
+  dealId       String?
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  uploadedBy User         @relation(fields: [uploadedById], references: [id])
+  contact    Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company    Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deal       Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+}
+
+model CustomFieldDefinition {
+  id       String          @id @default(cuid())
+  orgId    String
+  entity   EntityType
+  key      String
+  label    String
+  type     CustomFieldType @default(TEXT)
+  options  String[]        @default([])
+  required Boolean         @default(false)
+  position Int             @default(0)
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, entity, key])
+}
+
+model SavedView {
+  id       String     @id @default(cuid())
+  orgId    String
+  entity   EntityType
+  name     String
+  filters  Json       @default("{}")
+  ownerId  String
+  isShared Boolean    @default(false)
+  createdAt DateTime  @default(now())
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  owner User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, entity])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  orgId       String
+  actorId     String?
+  action      String
+  entity      String
+  entityId    String
+  entityLabel String?
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now())
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actor User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, createdAt])
+  @@index([orgId, entity, entityId])
+}
