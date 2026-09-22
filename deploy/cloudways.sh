@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Deploys / updates SyncCRM on a Cloudways application over SSH (no root needed).
+#
+# One-time:   bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/main/deploy/cloudways.sh) install
+# Update:     ~/synccrm/deploy/cloudways.sh update
+#
+# Layout (APP_DIR = ~/applications/<app>/private_html/synccrm):
+#   code + .next build + uploads live under APP_DIR; public_html only holds the .htaccess proxy.
+set -euo pipefail
+
+MODE="${1:-install}"
+NODE_VERSION="${NODE_VERSION:-22}"
+PORT="${PORT:-3000}"
+REPO="${REPO:-https://github.com/cerebrumtech/SyncCRM.git}"
+BRANCH="${BRANCH:-main}"
+
+# Locate the Cloudways application folder (the one containing public_html).
+if [[ -z "${APP_ROOT:-}" ]]; then
+  APP_ROOT="$(ls -d "$HOME"/applications/*/ 2>/dev/null | head -n1 || true)"
+  APP_ROOT="${APP_ROOT%/}"
+fi
+if [[ -z "$APP_ROOT" || ! -d "$APP_ROOT/public_html" ]]; then
+  echo "Could not find a Cloudways application folder. Run: APP_ROOT=/home/<user>/applications/<app> $0 $MODE" >&2
+  exit 1
+fi
+APP_DIR="$APP_ROOT/private_html/synccrm"
+mkdir -p "$APP_ROOT/private_html"
+
+echo "== Node $NODE_VERSION via nvm"
+export NVM_DIR="$HOME/.nvm"
+if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
+  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+fi
+# shellcheck disable=SC1090
+source "$NVM_DIR/nvm.sh"
+nvm install "$NODE_VERSION" >/dev/null
+nvm use "$NODE_VERSION" >/dev/null
+corepack enable >/dev/null 2>&1 || npm install -g corepack >/dev/null
+command -v pm2 >/dev/null || npm install -g pm2 >/dev/null
+echo "node $(node -v), pnpm $(pnpm -v 2>/dev/null || echo 'via corepack'), pm2 $(pm2 -v)"
+
+echo "== Source"
+if [[ -d "$APP_DIR/.git" ]]; then
+  git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH"
+  git -C "$APP_DIR" reset --hard "origin/$BRANCH"
+else
+  git clone --depth 1 --branch "$BRANCH" "$REPO" "$APP_DIR"
+fi
+cd "$APP_DIR"
+
+echo "== Environment"
+if [[ ! -f .env ]]; then
+  if [[ -z "${DATABASE_URL:-}" || -z "${APP_URL:-}" ]]; then
+    echo "First install needs DATABASE_URL and APP_URL, e.g.:" >&2
+    echo "  DATABASE_URL='postgresql://user:pass@host/db?sslmode=require' APP_URL='https://crm.example.com' $0 install" >&2
+    exit 1
+  fi
+  cat > .env <<EOF
+DATABASE_URL="$DATABASE_URL"
+APP_URL="$APP_URL"
+UPLOAD_DIR="$APP_DIR/uploads"
+PORT=$PORT
+EOF
+  chmod 600 .env
+fi
+mkdir -p uploads
+
+echo "== Build"
+pnpm install --frozen-lockfile
+pnpm exec prisma migrate deploy
+pnpm build
+
+echo "== Apache proxy (.htaccess in public_html)"
+cp deploy/cloudways.htaccess "$APP_ROOT/public_html/.htaccess"
+sed -i "s/__PORT__/$PORT/g" "$APP_ROOT/public_html/.htaccess"
+# A placeholder index keeps Cloudways' health checks quiet if the proxy is ever off.
+[[ -f "$APP_ROOT/public_html/index.html" ]] || echo "SyncCRM" > "$APP_ROOT/public_html/index.html"
+
+echo "== Start with PM2"
+pm2 delete synccrm >/dev/null 2>&1 || true
+PORT="$PORT" pm2 start "pnpm exec next start -p $PORT" --name synccrm --cwd "$APP_DIR" --time
+pm2 save >/dev/null
+
+echo "== Watchdog"
+chmod +x deploy/cloudways-watchdog.sh
+echo
+echo "Done. Add this cron job in the Cloudways panel (Application > Cron Job Management > Advanced), every minute:"
+echo "  * * * * *  $APP_DIR/deploy/cloudways-watchdog.sh"
+echo "Then open $(grep '^APP_URL' .env | cut -d'"' -f2) — first visit shows /setup (or run: pnpm db:seed for demo data)."
