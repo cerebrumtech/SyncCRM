@@ -106,11 +106,9 @@ pnpm build
 echo "== Apache proxy (.htaccess in public_html)"
 cp deploy/cloudways.htaccess "$APP_ROOT/public_html/.htaccess"
 sed -i "s/__PORT__/$PORT/g" "$APP_ROOT/public_html/.htaccess"
-# Cloudways serves any file that exists in public_html straight from nginx, bypassing
-# .htaccess. So public_html must hold no index page (earlier installs wrote one) ...
-if [[ -f "$APP_ROOT/public_html/index.html" ]] && [[ "$(cat "$APP_ROOT/public_html/index.html")" == "SyncCRM" ]]; then
-  rm -f "$APP_ROOT/public_html/index.html"
-fi
+# Cloudways' nginx serves files that exist in public_html itself and answers "/" on its own
+# (403 without an index file), so a static index hands "/" to the app ...
+cp deploy/cloudways-index.html "$APP_ROOT/public_html/index.html"
 # ... and the build's static assets are published there so nginx can serve them directly.
 rm -rf "$APP_ROOT/public_html/_next"
 mkdir -p "$APP_ROOT/public_html/_next"

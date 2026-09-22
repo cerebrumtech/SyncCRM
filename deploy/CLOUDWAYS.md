@@ -58,6 +58,7 @@ ssh <ssh-user>@<server-ip>
 
 - **500 / "Proxy Error" from Apache** — `mod_proxy` is not enabled on that server. Ask Cloudways support to enable `mod_proxy` and `mod_proxy_http` for the application (they do this on request), then reload the page.
 - **Stale pages after login/logout** — Varnish is still on; disable it in Application Settings → General (or add a URL exclusion for `/` on the Varnish tab) and purge.
-- **The page only shows the word "SyncCRM" or a Cloudways placeholder** — a static `index.html`/`index.php` is sitting in `public_html`, and nginx serves it before Apache's proxy rule runs. Remove it (`rm ~/applications/<app>/public_html/index.html`) or rerun the installer's `update`, which does this for you.
+- **"403 Forbidden / nginx" on the home page** — nginx answers `/` from `public_html` and needs the redirecting `index.html` the installer writes there (`deploy/cloudways-index.html`); rerun `update`. A Cloudways placeholder page instead means the install never ran for this app.
+- **"Proxy Error" / 500 on `/login`** — see the first item above (`mod_proxy`).
 - **App not running** — `pm2 logs synccrm` shows the reason; `pm2 restart synccrm` restarts it. The watchdog cron does the same automatically.
 - **Database connection refused** — the Postgres provider must allow connections from the Cloudways server IP (Neon allows all by default; others need an allow-list).
