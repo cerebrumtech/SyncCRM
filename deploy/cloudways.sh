@@ -40,10 +40,18 @@ if [[ ! -d "$APP_ROOT/public_html" ]]; then
   echo "No public_html under $APP_ROOT — is this the right application folder?" >&2
   exit 1
 fi
-if [[ "$MODE" == "install" && -n "$(ls -A "$APP_ROOT/public_html" 2>/dev/null | grep -v -E '^(index\.(html|php)|\.htaccess)$')" ]]; then
-  echo "public_html of $APP_ROOT already contains files — refusing to install over another application." >&2
-  ls -A "$APP_ROOT/public_html" >&2
-  exit 1
+if [[ "$MODE" == "install" && -n "$(ls -A "$APP_ROOT/public_html" 2>/dev/null)" ]]; then
+  # Cloudways' "Custom App" ships a placeholder site; anything else is treated as a real app.
+  if grep -qiE "cloud hosting|cloudways" "$APP_ROOT/public_html/index.php" "$APP_ROOT/public_html/index.html" 2>/dev/null; then
+    BACKUP="$APP_ROOT/private_html/public_html_placeholder_$(date +%Y%m%d%H%M%S)"
+    mkdir -p "$BACKUP"
+    mv "$APP_ROOT/public_html/"* "$APP_ROOT/public_html/".[!.]* "$BACKUP"/ 2>/dev/null || true
+    echo "Moved the Cloudways placeholder page to $BACKUP"
+  elif [[ -n "$(ls -A "$APP_ROOT/public_html" | grep -v -E '^(index\.html|\.htaccess)$')" ]]; then
+    echo "public_html of $APP_ROOT already contains files — refusing to install over another application." >&2
+    ls -A "$APP_ROOT/public_html" >&2
+    exit 1
+  fi
 fi
 echo "Application folder: $APP_ROOT"
 APP_DIR="$APP_ROOT/private_html/synccrm"
