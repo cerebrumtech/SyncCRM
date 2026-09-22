@@ -15,14 +15,37 @@ REPO="${REPO:-https://github.com/cerebrumtech/SyncCRM.git}"
 BRANCH="${BRANCH:-main}"
 
 # Locate the Cloudways application folder (the one containing public_html).
+# - Application-level SSH user: its home IS the app folder.
+# - Master user: apps live under ~/applications/<folder>; exactly one must be chosen
+#   (APP_NAME=<folder> or APP_ROOT=<path>) so no other application is ever touched.
 if [[ -z "${APP_ROOT:-}" ]]; then
-  APP_ROOT="$(ls -d "$HOME"/applications/*/ 2>/dev/null | head -n1 || true)"
-  APP_ROOT="${APP_ROOT%/}"
+  if [[ -d "$HOME/public_html" ]]; then
+    APP_ROOT="$HOME"
+  elif [[ -n "${APP_NAME:-}" ]]; then
+    APP_ROOT="$HOME/applications/$APP_NAME"
+  else
+    mapfile -t APPS < <(ls -d "$HOME"/applications/*/ 2>/dev/null)
+    if [[ ${#APPS[@]} -eq 1 ]]; then
+      APP_ROOT="${APPS[0]%/}"
+    else
+      echo "This SSH user can see ${#APPS[@]} applications:" >&2
+      printf '  %s\n' "${APPS[@]}" >&2
+      echo "Choose the SyncCRM one explicitly: APP_NAME=<folder name> $0 $MODE" >&2
+      echo "(or SSH in with the SyncCRM application's own credentials from Access Details)" >&2
+      exit 1
+    fi
+  fi
 fi
-if [[ -z "$APP_ROOT" || ! -d "$APP_ROOT/public_html" ]]; then
-  echo "Could not find a Cloudways application folder. Run: APP_ROOT=/home/<user>/applications/<app> $0 $MODE" >&2
+if [[ ! -d "$APP_ROOT/public_html" ]]; then
+  echo "No public_html under $APP_ROOT — is this the right application folder?" >&2
   exit 1
 fi
+if [[ "$MODE" == "install" && -n "$(ls -A "$APP_ROOT/public_html" 2>/dev/null | grep -v -E '^(index\.(html|php)|\.htaccess)$')" ]]; then
+  echo "public_html of $APP_ROOT already contains files — refusing to install over another application." >&2
+  ls -A "$APP_ROOT/public_html" >&2
+  exit 1
+fi
+echo "Application folder: $APP_ROOT"
 APP_DIR="$APP_ROOT/private_html/synccrm"
 mkdir -p "$APP_ROOT/private_html"
 

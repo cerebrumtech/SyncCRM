@@ -20,6 +20,12 @@ Cloudways is a PHP-oriented platform: no root access, no Docker and no PostgreSQ
 Create a Postgres 16 database (e.g. [Neon](https://neon.tech) — the free tier is enough to start; choose the Singapore region for India). Copy the connection string; it looks like
 `postgresql://user:password@host/dbname?sslmode=require`.
 
+## Does this affect other applications on the server?
+
+No. The script only writes inside the SyncCRM application folder (`private_html/synccrm` for the code and uploads, one `.htaccess` in its `public_html`) and inside the SSH user's home (`~/.nvm`, `~/.pm2`). It never touches other applications' folders, PHP, MySQL, Apache/nginx config or Varnish for other apps. Safeguards: it refuses to run when the SSH user can see several applications and none is chosen, and it refuses to install into a `public_html` that already has files.
+
+Resources: the app itself uses ~300–500 MB RAM. The one-time `next build` needs ~1.5 GB free for a few minutes — on a 1 GB Cloudways server run the install at a quiet time or resize to 2 GB first. Port 3000 is only used locally on the server (set `PORT=3001` if something else already listens there).
+
 ## 3. Install (once, over SSH)
 
 ```bash
@@ -28,6 +34,8 @@ DATABASE_URL='postgresql://user:password@host/dbname?sslmode=require' \
 APP_URL='https://crm.syncworkstech.com' \
 bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/main/deploy/cloudways.sh) install
 ```
+
+Use the **application's own SSH credentials** (Application → Access Details → Application Credentials) so the script can only see that one app. If you use the server's master user instead, add `APP_NAME=<folder name>` (the folder shown under Access Details, e.g. `APP_NAME=abcdefghij`) in front of the command.
 
 The script installs Node + pnpm + PM2 (user-level, no root), clones the repo into `private_html/synccrm`, writes `.env`, applies the database migrations, builds, starts the app and writes the Apache proxy `.htaccess` into `public_html`.
 
