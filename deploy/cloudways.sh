@@ -109,6 +109,16 @@ sed -i "s/__PORT__/$PORT/g" "$APP_ROOT/public_html/.htaccess"
 
 echo "== Start with PM2"
 pm2 delete synccrm >/dev/null 2>&1 || true
+sleep 1
+# Pick the first free localhost port at or above PORT so we never collide with another service.
+port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && { exec 3>&-; return 0; } || return 1; }
+while port_in_use "$PORT"; do
+  echo "Port $PORT is in use by another service — trying $((PORT + 1))"
+  PORT=$((PORT + 1))
+done
+sed -i "s/^PORT=.*/PORT=$PORT/" .env
+sed -i -E "s#127\.0\.0\.1:[0-9]+#127.0.0.1:$PORT#g" "$APP_ROOT/public_html/.htaccess"
+echo "Using port $PORT"
 PORT="$PORT" pm2 start "pnpm exec next start -p $PORT" --name synccrm --cwd "$APP_DIR" --time
 pm2 save >/dev/null
 
