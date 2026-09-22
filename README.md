@@ -21,6 +21,19 @@ pnpm dev                        # http://localhost:3000
 
 Without the seed, the first visit opens `/setup` to create the organisation and owner account.
 
+## Deploy with Docker (any VPS)
+
+```bash
+git clone https://github.com/cerebrumtech/SyncCRM && cd SyncCRM
+export POSTGRES_PASSWORD='a-strong-password' APP_URL='https://crm.example.com'
+docker compose up -d --build          # builds the app, starts PostgreSQL, applies migrations
+docker compose exec app pnpm db:seed  # optional demo data
+```
+
+The app listens on port 3000 (`PORT=8080 docker compose up` to change); put it behind HTTPS (Caddy, nginx or the host's load balancer) and point `APP_URL` at that address so invite links are correct. Database and uploads live in the `pgdata` and `uploads` volumes. Any platform that runs a Dockerfile plus a PostgreSQL 16 database (Railway, Render, Fly.io, AWS) works the same way — set `DATABASE_URL`, `APP_URL` and `UPLOAD_DIR`.
+
+Project tracking: Jira project **CRM** (SyncCRM) at ensurechat.atlassian.net.
+
 ## Scripts
 
 | Script | What it does |
