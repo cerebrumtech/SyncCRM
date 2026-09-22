@@ -3,7 +3,7 @@
 #
 # First install (paste in the Cloudways SSH session, master or application user):
 #   APP_NAME=<app folder> DB_NAME=<db> DB_USER=<user> DB_PASS='<password>' APP_URL='https://crm.example.com' \
-#   bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/main/deploy/cloudways.sh) install
+#   bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/php-codeigniter/deploy/cloudways.sh) install
 # Update to the latest code:
 #   APP_NAME=<app folder> ~/applications/<app folder>/public_html/deploy/cloudways.sh update
 #
@@ -12,7 +12,7 @@ set -euo pipefail
 
 MODE="${1:-install}"
 REPO="${REPO:-https://github.com/cerebrumtech/SyncCRM.git}"
-BRANCH="${BRANCH:-main}"
+BRANCH="${BRANCH:-php-codeigniter}"
 
 # --- locate the application folder ------------------------------------------------------
 if [[ -z "${APP_ROOT:-}" ]]; then
@@ -30,12 +30,12 @@ fi
 WEB="$APP_ROOT/public_html"
 echo "Application folder: $APP_ROOT"
 
-# --- PHP >= 8.2 ------------------------------------------------------------------------------
+# --- PHP >= 8.1 ------------------------------------------------------------------------------
 PHP=""
 for c in php8.4 php8.3 php8.2 php; do
-  if command -v "$c" >/dev/null 2>&1 && "$c" -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);' 2>/dev/null; then PHP="$c"; break; fi
+  if command -v "$c" >/dev/null 2>&1 && "$c" -r 'exit(version_compare(PHP_VERSION, "8.1.0", ">=") ? 0 : 1);' 2>/dev/null; then PHP="$c"; break; fi
 done
-[[ -n "$PHP" ]] || { echo "PHP 8.2 or newer is required. In the Cloudways panel set the application's PHP version to 8.2+ (Server > Settings & Packages), then rerun." >&2; exit 1; }
+[[ -n "$PHP" ]] || { echo "PHP 8.1 or newer is required (Cloudways: Server > Settings & Packages > PHP)." >&2; exit 1; }
 echo "Using $PHP ($("$PHP" -r 'echo PHP_VERSION;'))"
 
 # --- stop the old Node.js deployment of SyncCRM, if this app ever ran it ---------------------

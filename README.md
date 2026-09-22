@@ -1,10 +1,10 @@
 # SyncCRM
 
-Pipeline-first CRM for SyncWorks Technologies Pvt. Ltd., modelled on Zoho Bigin. Built with **PHP 8.2+ / CodeIgniter 4 / MySQL**, styled with the SyncWorkstech brand, and hosted on Cloudways as a normal PHP application.
+Pipeline-first CRM for SyncWorks Technologies Pvt. Ltd., modelled on Zoho Bigin. Built with **PHP 8.1+ / CodeIgniter 4.6 / MySQL**, styled with the SyncWorkstech brand, and hosted on Cloudways as a normal PHP application.
 
 ## Stack
 
-- CodeIgniter 4.7 (MVC, server-rendered views, CSRF protection, file sessions)
+- CodeIgniter 4.6 (MVC, server-rendered views, CSRF protection, file sessions)
 - MySQL 8 / MariaDB 10.6+ (`app/Database/Migrations`)
 - Tailwind CSS 4 compiled once into `public/assets/app.css` (no build step on the server), SortableJS for the Kanban board, a small vanilla `public/assets/app.js`
 - Indian defaults: ₹ with lakh/crore grouping, DD/MM/YYYY, IST (`app.appTimezone`)
