@@ -107,7 +107,7 @@ if [[ "${SEED:-0}" == "1" ]]; then "$PHP" spark db:seed DemoSeeder 2>&1 | tail -
 
 echo
 echo "Done. Two panel settings finish the job (Cloudways > Applications > this app > Application Settings):"
-echo "  1. General > Webroot  ->  public      (the app serves from public_html/public)"
-echo "  2. General > Varnish  ->  Disabled    (CRM pages must never be cached)"
+echo "  1. General > Webroot  ->  public_html/public     (type it exactly, including public_html/)"
+echo "  2. Varnish tab        ->  Disabled               (CRM pages must never be cached)"
 echo "Then open $(grep '^app.baseURL' .env | cut -d"'" -f2) — the first visit shows 'Set up your workspace'."
 echo "Demo data instead: SEED=1 when installing, or: cd $WEB && $PHP spark db:seed DemoSeeder"

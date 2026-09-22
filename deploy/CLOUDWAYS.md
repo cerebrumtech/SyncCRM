@@ -24,7 +24,7 @@ Add `SEED=1` in front to load the demo workspace (owner@syncworkstech.com / pass
 
 The script clones the repository into the application's `public_html`, runs Composer, writes `.env` (with a random encryption key and a one-time install key), creates the database tables and prints the two panel settings that finish the job:
 
-5. Application → **Application Settings** → General → **Webroot** = `public`.
+5. Application → **Application Settings** → General → **Webroot** = `public_html/public` (the field already contains `public_html/`; add `public` to the end). Do this *after* the install, because the folder must exist first.
 6. Application → **Application Settings** → **Varnish** = *Disabled* (or add a URL exclusion for `/` on the Varnish tab).
 
 Open the domain: the first visit shows **Set up your workspace** (unless you seeded demo data).
@@ -46,7 +46,7 @@ The one-time web installer runs the database setup from the browser: open `https
 ## Troubleshooting
 
 - **Blank page / 500** — check `public_html/writable/logs/`. Most often PHP is older than 8.1 or `writable/` is not writable (`chmod -R 775 writable`).
-- **Home page shows the Cloudways placeholder or a directory listing** — the Webroot is still `public_html`; set it to `public`.
+- **403 Forbidden from nginx** — either the app is not installed yet, or the Webroot is still `public_html/`; set it to `public_html/public`.
 - **Styles missing** — assets are served from `public/assets`; purge Varnish or disable it for this app.
 - **Stale pages after login/logout** — Varnish is still on for this app.
 - **Database connection failed** — re-check the MySQL credentials in `.env` (Access Details → MySQL Access); the host is `localhost`.
