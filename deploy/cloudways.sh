@@ -36,7 +36,13 @@ for c in php8.4 php8.3 php8.2 php; do
   if command -v "$c" >/dev/null 2>&1 && "$c" -r 'exit(version_compare(PHP_VERSION, "8.1.0", ">=") ? 0 : 1);' 2>/dev/null; then PHP="$c"; break; fi
 done
 [[ -n "$PHP" ]] || { echo "PHP 8.1 or newer is required (Cloudways: Server > Settings & Packages > PHP)." >&2; exit 1; }
-echo "Using $PHP ($("$PHP" -r 'echo PHP_VERSION;'))"
+echo "Using $PHP ($("$PHP" -r 'echo PHP_VERSION;')) for install commands"
+DEFAULT_PHP_VER="$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
+FPM_VERS="$( { ps -eo args 2>/dev/null | grep -oE 'php-fpm[0-9.]+|php/[0-9]+\.[0-9]+/' | grep -oE '[0-9]+\.[0-9]+' | sort -u | tr '\n' ' '; } || true )"
+echo "Server default php CLI: $DEFAULT_PHP_VER   php-fpm versions running: ${FPM_VERS:-unknown}"
+echo "NOTE: the web server must serve this app with PHP 8.1 or newer, which is a separate"
+echo "      setting from the CLI above. If the site later shows a PHP version error, the"
+echo "      application is still being served by an older PHP-FPM."
 
 # --- stop the old Node.js deployment of SyncCRM, if this app ever ran it ---------------------
 if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
@@ -67,12 +73,19 @@ else
 fi
 cd "$WEB"
 
-# --- composer -----------------------------------------------------------------------------
+# --- composer -------------------------------------------------------------------------------
+# Always drive Composer with the PHP chosen above. A global "composer" launcher runs on the
+# server's DEFAULT php, which on Cloudways is often 7.4 and fails the dependency check.
 echo "== Composer"
-if command -v composer >/dev/null 2>&1; then COMPOSER="composer"; else
-  [[ -f "$APP_ROOT/private_html/composer.phar" ]] || curl -fsSL https://getcomposer.org/composer-stable.phar -o "$APP_ROOT/private_html/composer.phar"
-  COMPOSER="$PHP $APP_ROOT/private_html/composer.phar"; fi
-$COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader 2>&1 | tail -2
+# Run Composer with the PHP chosen above. Calling the bare "composer" launcher would use the
+# server's DEFAULT php, which on Cloudways is often 7.4 and fails CodeIgniter's requirement.
+COMPOSER_PATH="$(command -v composer 2>/dev/null || true)"
+if [[ -z "$COMPOSER_PATH" ]] || ! "$PHP" "$COMPOSER_PATH" --version >/dev/null 2>&1; then
+  COMPOSER_PATH="$APP_ROOT/private_html/composer.phar"
+  [[ -f "$COMPOSER_PATH" ]] || curl -fsSL https://getcomposer.org/composer-stable.phar -o "$COMPOSER_PATH"
+fi
+echo "Composer: $COMPOSER_PATH run with $PHP"
+"$PHP" "$COMPOSER_PATH" install --no-dev --no-interaction --prefer-dist --optimize-autoloader 2>&1 | tail -3
 
 # --- environment ----------------------------------------------------------------------------
 echo "== Environment"
