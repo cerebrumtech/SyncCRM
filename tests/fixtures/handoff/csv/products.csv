@@ -1,0 +1,4 @@
+id,name,sku,description,unit_price_inr,tax_rate_pct,is_active
+p1,SyncVerify,SV,"KYC, bureau and bank verification",0.00,18.00,1
+p2,SyncLMS,LMS,Loan origination and management,0.00,18.00,1
+p3,SyncCollect,COLLECT,eNACH and EMI collection,0.00,18.00,1

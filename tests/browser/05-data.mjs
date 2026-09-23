@@ -1,0 +1,97 @@
+import fs from "node:fs";
+import { launch, login, base, shots, ok } from "./_lib.mjs";
+const { browser, page } = await launch();
+const N = Date.now();
+await login(page);
+page.on("dialog", async (d) => { await d.accept(); });
+// custom fields
+await page.goto(base + "/settings/fields");
+await page.click("[data-open=field-dialog]");
+await page.selectOption("#f-entity", "COMPANY");
+await page.selectOption("#f-type", "TEXT");
+await page.fill("#f-label", "GST number");
+await page.click("#field-dialog button[type=submit]");
+await page.waitForSelector("[data-testid=form-success]");
+await page.click("[data-open=field-dialog]");
+await page.selectOption("#f-entity", "CONTACT");
+await page.selectOption("#f-type", "SELECT");
+await page.fill("#f-label", "Preferred language");
+await page.fill("#f-options", "Marathi\nHindi\nEnglish");
+await page.check("#field-dialog input[name=required]");
+await page.click("#field-dialog button[type=submit]");
+await page.waitForSelector("[data-testid=form-success]");
+await page.click("[data-open=field-dialog]");
+await page.selectOption("#f-entity", "DEAL");
+await page.selectOption("#f-type", "SELECT");
+await page.fill("#f-label", "Licence type");
+await page.fill("#f-options", "Standard, Professional, Enterprise");
+await page.click("#field-dialog button[type=submit]");
+await page.waitForSelector("[data-testid=form-success]");
+ok("fields created", (await page.locator("[data-testid=field-row]").count()) === 3);
+await page.click("[data-open=field-dialog]");
+await page.selectOption("#f-entity", "COMPANY");
+await page.fill("#f-label", "GST number");
+await page.click("#field-dialog button[type=submit]");
+await page.waitForSelector("[data-testid=form-error]");
+ok("duplicate field rejected", (await page.textContent("[data-testid=form-error]")).includes("already exists"));
+await page.screenshot({ path: `${shots}/14-fields.png` });
+// required custom field enforced on contact form
+await page.goto(base + "/contacts");
+await page.click("[data-open=contact-dialog]");
+ok("custom select rendered", (await page.locator("#contact-dialog select[name=cf_preferred_language]").count()) === 1);
+await page.fill("#contact-dialog #first_name", `Custom ${N}`);
+await page.evaluate(() => document.querySelector("#contact-dialog select[name=cf_preferred_language]").removeAttribute("required"));
+await page.click("#contact-dialog button[type=submit]");
+await page.waitForSelector("[data-testid=form-error]");
+ok("required custom field enforced server-side", (await page.textContent("[data-testid=form-error]")).includes("Preferred language is required"));
+await page.selectOption("#contact-dialog select[name=cf_preferred_language]", "Hindi");
+await page.click("#contact-dialog button[type=submit]");
+await page.waitForURL("**/contacts/*");
+ok("custom value shown on detail", (await page.textContent("body")).includes("Hindi"));
+// company custom field + stage rule referencing it
+await page.goto(base + "/settings/pipelines");
+ok("deal custom field selectable as stage rule", (await page.locator("#stage-edit-dialog input[value=cf_licence_type]").count()) === 1);
+// CSV import contacts (with company + custom field + tags + duplicates)
+const csv = "tmp/import.csv";
+fs.writeFileSync(csv, `First Name,Last name,Email,Mobile,Company,Tags,Preferred language\nAsha,Patil,asha${N}@nashik.coop,98111 ${String(N).slice(-5)},Nashik Sahakari ${N},vip; north,Marathi\nDev,Rane,dev${N}@nashik.coop,,Nashik Sahakari ${N},,English\nAsha,Patil,asha${N}@nashik.coop,,,,\n,Missing,x@y.z,,,,\n`);
+await page.goto(base + "/settings/import");
+await page.selectOption("#imp-entity", "CONTACT");
+await page.setInputFiles("#imp-file", csv);
+await page.click("form[action='/settings/import/upload'] button[type=submit]");
+await page.waitForSelector("[data-testid=import-map]");
+ok("mapping guessed", (await page.inputValue("select[name='map[0]']")) === "first_name" && (await page.inputValue("select[name='map[3]']")) === "phone" && (await page.inputValue("select[name='map[4]']")) === "company_name" && (await page.inputValue("select[name='map[6]']")) === "cf_preferred_language");
+await page.screenshot({ path: `${shots}/15-import-map.png` });
+await page.selectOption("#imp-dup", "skip");
+await page.click("[data-testid=import-map] button[type=submit]:not([name=cancel])");
+await page.waitForSelector("[data-testid=import-summary]");
+const sum = await page.textContent("[data-testid=import-summary]");
+ok("import summary: 2 created, 1 skipped, 1 error", sum.includes("2</b> created") || (sum.includes("2 created") && sum.includes("1 skipped") && sum.includes("1 errors")));
+await page.goto(base + "/contacts?q=Nashik");
+ok("imported contacts linked to new company", (await page.locator("[data-testid=contacts-table] tbody tr").count()) === 2 && (await page.textContent("[data-testid=contacts-table]")).includes(`Nashik Sahakari ${N}`));
+await page.goto(base + "/contacts?tag=vip");
+ok("imported tag filter", (await page.locator("[data-testid=contacts-table] tbody tr").count()) === 1);
+// export includes custom field column
+const exp = await page.evaluate(async () => { const r = await fetch("/export/contacts?q=Nashik"); return await r.text(); });
+ok("export has custom column", exp.includes("Preferred language") && exp.includes("Marathi"));
+// dedupe block rule
+await page.goto(base + "/settings/organization");
+await page.selectOption("#dd-contactEmail", "block");
+await page.click("form[action='/settings/organization/dedupe'] button");
+await page.waitForSelector("[data-testid=form-success]");
+await page.goto(base + "/contacts");
+await page.click("[data-open=contact-dialog]");
+await page.fill("#contact-dialog #first_name", "Blocked");
+await page.fill("#contact-dialog #email", `asha${N}@nashik.coop`);
+await page.selectOption("#contact-dialog select[name=cf_preferred_language]", "Hindi");
+await page.click("#contact-dialog button[type=submit]");
+await page.waitForSelector("[data-testid=form-error]");
+ok("block rule refuses duplicate", (await page.textContent("[data-testid=form-error]")).includes("blocked"));
+// saved view delete + audit entries for import
+await page.goto(base + "/settings/audit?entity=CONTACT");
+ok("import audited", (await page.textContent("body")).includes("import"));
+// installer: hidden without key, works with key
+const r404 = await page.goto(base + "/install");
+ok("installer hidden without key", r404.status() === 404);
+await page.goto(base + "/install?key=dev-install-key");
+ok("installer status page", (await page.textContent("body")).includes("Tables installed"));
+await browser.close();

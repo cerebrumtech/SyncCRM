@@ -12,12 +12,18 @@ The production server runs PHP 7.4, which every maintained PHP framework has now
 
 ```bash
 cp .env.example .env            # set database.default.* and app.baseURL
-php schema/install.php          # creates the tables
-php schema/install.php --seed   # optional demo workspace
-php -S 127.0.0.1:8080 -t public # http://127.0.0.1:8080
+php schema/install.php --seed   # tables, plus a demo workspace
+bash dev/serve.sh               # http://127.0.0.1:8080
 ```
 
 Demo sign-in: `owner@syncworkstech.com` / `password123`, plus `admin@`, `rahul@` and `priya@` on the same password. Without the seed, the first visit opens `/setup`.
+
+Start the server through `dev/serve.sh`, not a bare `php -S ... -t public`: the router it
+loads reproduces the `try_files` rule nginx applies in production, without which detail
+URLs such as `/contacts/12` return 404 locally.
+
+**Setting up from scratch — installing PHP and MySQL, VS Code, the database, the first
+run, the tests, troubleshooting — is in [SETUP.md](SETUP.md).**
 
 ## Deploy
 

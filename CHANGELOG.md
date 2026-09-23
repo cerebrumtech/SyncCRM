@@ -9,6 +9,20 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-23
 
+- **CRM-35** `chore` The sales hand-off is fetched onto the server by a script that checks
+  its own work: `deploy/fetch-handoff.sh` refuses a Drive sign-in page, an empty file, a CSV
+  whose header is not the one expected, a workbook that will not open, and a path that would
+  escape the target directory. It reports a workbook's tabs so a missing sheet is visible
+  before the import runs. File ids stay out of this repository — for a link-shared folder the
+  id is the access key and this repository is public.
+
+- **CRM-35** `improvement` The import no longer leaves two of the export's files unused.
+  `possible_duplicate_companies.csv` now tags both companies in each suspected pair
+  `possible-duplicate` and writes a note on each naming the other, the similarity and why the
+  export kept them apart, so the pairs are filterable in the CRM instead of readable only in
+  the export folder. `unassigned_phone_numbers.csv` is listed in the import report; those
+  numbers belong to no person and no society, so nothing is invented from them.
+
 - **CRM-34** `chore` A deploy can no longer install an incomplete checkout. An empty commit
   passed the compile check, because a loop over no files reports no failures; the installer
   now requires the application's key files and a plausible PHP file count, and rolls back

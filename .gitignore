@@ -4,8 +4,18 @@
 /writable/logs/*
 /writable/uploads/*
 /writable/imports/*
+/writable/throttle/*
 !/writable/logs/index.html
 !/writable/uploads/index.html
 !/writable/imports/index.html
-/nginx-sim.php
-/restart.sh
+
+# Browser tests: npm packages and per-run scratch (screenshots, upload probes)
+/tests/browser/node_modules/
+/tests/browser/tmp/
+/tests/browser/package-lock.json
+
+# The PHP 7.4 checker's Composer packages: run `composer install` in tools/compat
+/tools/compat/vendor/
+
+# Stray scratch if a test is run from the repo root instead of through run.sh
+/tmp/

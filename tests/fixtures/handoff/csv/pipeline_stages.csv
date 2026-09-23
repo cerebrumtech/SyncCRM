@@ -1,0 +1,6 @@
+pipeline,is_default_pipeline,stage,position,probability_pct,is_won,is_lost,colour
+Sales,1,New Lead,0,10,0,0,#04A2FB
+Sales,1,Negotiation,6,80,0,0,#1B243E
+Sales,1,Won,7,100,1,0,#10B981
+Onboarding,0,Kickoff,0,20,0,0,#04A2FB
+Onboarding,0,Live,3,100,1,0,#10B981

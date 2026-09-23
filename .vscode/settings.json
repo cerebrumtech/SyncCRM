@@ -1,0 +1,17 @@
+{
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "[php]": { "editor.tabSize": 4, "editor.insertSpaces": true },
+  "[css]":  { "editor.tabSize": 2 },
+  "[javascript]": { "editor.tabSize": 2 },
+  "intelephense.environment.phpVersion": "7.4.33",
+  "search.exclude": {
+    "**/writable/logs": true,
+    "**/writable/uploads": true,
+    "**/tests/browser/node_modules": true,
+    "**/tests/browser/tmp": true,
+    "**/tools/compat/vendor": true
+  },
+  "files.associations": { "*.php": "php" }
+}

@@ -1,0 +1,3 @@
+id,name,email,role,colour,login_password
+u1,Hanuman Kale,owner@syncworkstech.com,OWNER,#1B243E,placeholder
+u2,Monika,monika@syncworkstech.com,MEMBER,#0068FF,placeholder

@@ -1,0 +1,13 @@
+import { launch, login, base, shots, ok } from "./_lib.mjs";
+const { browser, page } = await launch();
+await login(page);
+page.on("dialog", async (d) => { console.log("DIALOG:", d.message()); await d.accept(); });
+page.on("request", (r) => { if (r.url().includes("/move")) console.log("REQ", r.url(), r.postData()); });
+page.on("response", async (r) => { if (r.url().includes("/move")) console.log("MOVE", r.status(), (await r.text()).replace(/\s+/g, " ")); });
+await page.goto(base + "/deals/" + process.env.ID + "#items");
+console.log("stage select value:", await page.inputValue("[data-stage-select]"), "options:", await page.locator("[data-stage-select] option").allTextContents());
+console.log("amount text:", (await page.textContent("h1 + p")).slice(0, 60));
+await page.selectOption("[data-stage-select]", { label: "Proposal Sent (60%)" });
+await page.waitForTimeout(1500);
+console.log("after:", page.url(), await page.inputValue("[data-stage-select]"));
+await browser.close();

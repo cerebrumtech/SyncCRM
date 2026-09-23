@@ -1,0 +1,11 @@
+import { launch, login, base } from "./_lib.mjs";
+const { browser, page } = await launch();
+await login(page);
+await page.goto(base + "/settings/teams");
+await page.evaluate(() => document.querySelector("dialog.modal")?.showModal());
+await page.waitForTimeout(500);
+await page.screenshot({ path: "tmp/shots/short-dialog.png" });
+const m = await page.evaluate(() => { const d = document.querySelector("dialog[open]"); const r = d.getBoundingClientRect();
+  return { id: d.id, h: Math.round(r.height), scrolls: d.scrollHeight > d.clientHeight + 2 }; });
+console.log(JSON.stringify(m));
+await browser.close();

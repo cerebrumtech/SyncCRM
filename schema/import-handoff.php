@@ -62,6 +62,12 @@ function readCsv(string $path): array
     return $rows;
 }
 
+/** The review lists are optional: an older export folder will not have them. */
+function readCsvIfPresent(string $path): array
+{
+    return is_file($path) ? readCsv($path) : [];
+}
+
 /** Empty string means "not known" in this export, never zero. */
 function val(array $row, string $key)
 {
@@ -126,8 +132,12 @@ $src = [
     'activities' => readCsv($csvDir . '/activities.csv'),
     'notes'      => readCsv($csvDir . '/notes.csv'),
 ];
+// Two review lists rather than records. They are still part of the hand-off, so
+// they are carried into the CRM rather than left sitting in the export folder.
+$src['duplicates'] = readCsvIfPresent($csvDir . '/possible_duplicate_companies.csv');
+$src['loose_phones'] = readCsvIfPresent($csvDir . '/unassigned_phone_numbers.csv');
 foreach ($src as $name => $rows) {
-    say(sprintf('   %-11s %5d rows', $name, count($rows)));
+    say(sprintf('   %-13s %5d rows', $name, count($rows)));
 }
 
 $db = db_connect();
@@ -241,8 +251,19 @@ try {
     say('== Companies');
     $companyByLegacy = $companyByName = [];
     $tagSeen = [];
+    // Every company on either side of a suspected duplicate pair carries a tag, so
+    // the pairs are filterable in the CRM instead of only readable in the export.
+    $dupLegacy = [];
+    foreach ($src['duplicates'] as $d) {
+        foreach (['company_a_id', 'company_b_id'] as $k) {
+            $id = val($d, $k);
+            if ($id !== null) { $dupLegacy[$id] = true; }
+        }
+    }
     foreach ($src['companies'] as $c) {
         $tags = listVal($c, 'tags');
+        if (isset($dupLegacy[(string) val($c, 'id')])) { $tags[] = 'possible-duplicate'; }
+        $tags = array_values(array_unique($tags));
         foreach ($tags as $t) { $tagSeen[$t] = true; }
         $db->query('INSERT INTO companies (organization_id, name, industry, website, phone, alt_phone, email,'
             . ' address_line, city, district, state, postal_code, country, description,'
@@ -409,6 +430,50 @@ try {
     }
     say('   ' . $noteCount . ' notes');
 
+    // ------------------------------------------------------------ duplicate pairs
+    // A pair the export could not decide on. Recorded as a note on both companies so
+    // whoever opens either one sees the other and the reason it was kept separate.
+    $dupNotes = 0;
+    $dupSkipped = 0;
+    foreach ($src['duplicates'] as $d) {
+        $aId = $companyByLegacy[(string) val($d, 'company_a_id')] ?? null;
+        $bId = $companyByLegacy[(string) val($d, 'company_b_id')] ?? null;
+        if ($aId === null || $bId === null) { $dupSkipped++; continue; }
+        $body = sprintf(
+            "Possible duplicate of \"%s\"%s.\nName similarity %s. Kept separate because %s.\nMerge them if they are the same society; otherwise delete this note.",
+            (string) val($d, 'company_b_name'),
+            val($d, 'company_b_city') !== null ? ' (' . val($d, 'company_b_city') . ')' : '',
+            (string) (val($d, 'name_similarity') ?? '?'),
+            (string) (val($d, 'kept_separate_because') ?? 'the export could not tell')
+        );
+        $mirror = sprintf(
+            "Possible duplicate of \"%s\"%s.\nName similarity %s. Kept separate because %s.\nMerge them if they are the same society; otherwise delete this note.",
+            (string) val($d, 'company_a_name'),
+            val($d, 'company_a_city') !== null ? ' (' . val($d, 'company_a_city') . ')' : '',
+            (string) (val($d, 'name_similarity') ?? '?'),
+            (string) (val($d, 'kept_separate_because') ?? 'the export could not tell')
+        );
+        foreach ([[$aId, $body], [$bId, $mirror]] as [$cid, $text]) {
+            $db->query('INSERT INTO notes (organization_id, body, contact_id, company_id, deal_id, author_id, created_at, updated_at)'
+                . ' VALUES (?,?,NULL,?,NULL,?,NOW(),NOW())', [$orgId, $text, $cid, $ownerId]);
+            $dupNotes++;
+        }
+    }
+    if ($src['duplicates']) {
+        say(sprintf('   %d duplicate-pair notes on %d pairs, tagged possible-duplicate',
+            $dupNotes, count($src['duplicates']) - $dupSkipped));
+        if ($dupSkipped) { warn("{$dupSkipped} duplicate pair(s) named a company that is not in companies.csv"); }
+    }
+
+    // ------------------------------------------------------------ loose phone numbers
+    // Numbers the workbook carries that belong to no person and no society. There is
+    // nothing to attach them to, so they are named in this report rather than
+    // invented into contacts nobody can identify.
+    foreach ($src['loose_phones'] as $p) {
+        warn(sprintf('Phone %s from sheet "%s" is on no contact: %s',
+            (string) val($p, 'phone'), (string) val($p, 'source_sheet'), (string) val($p, 'note')));
+    }
+
     // ------------------------------------------------------------ tags
     foreach (array_keys($tagSeen) as $t) {
         $db->query('INSERT INTO tags (organization_id, name, color) VALUES (?, ?, ?)', [$orgId, $t, '#0068FF']);
@@ -423,7 +488,7 @@ try {
         ['contacts',   count($src['contacts']),   (int) $db->query('SELECT COUNT(*) c FROM contacts')->getRowArray()['c']],
         ['deals',      count($src['deals']),      (int) $db->query('SELECT COUNT(*) c FROM deals')->getRowArray()['c']],
         ['activities', count($src['activities']), (int) $db->query('SELECT COUNT(*) c FROM activities')->getRowArray()['c']],
-        ['notes',      count($src['notes']),      (int) $db->query('SELECT COUNT(*) c FROM notes')->getRowArray()['c']],
+        ['notes',      count($src['notes']) + $dupNotes, (int) $db->query('SELECT COUNT(*) c FROM notes')->getRowArray()['c']],
     ];
     $bad = 0;
     foreach ($checks as [$name, $in, $out]) {

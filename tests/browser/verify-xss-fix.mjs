@@ -1,0 +1,18 @@
+import { launch, login, base } from "./_lib.mjs";
+import fs from "node:fs";
+const { browser, page } = await launch();
+await login(page);
+const dir = "tmp/vprobe";
+fs.mkdirSync(dir, { recursive: true });
+const svg = `${dir}/attack.svg`;
+fs.writeFileSync(svg, `<svg xmlns="http://www.w3.org/2000/svg"><script>document.title='XSS-FIRED'</script></svg>`);
+await page.goto(base + "/contacts");
+const href = await page.locator('a[href*="/contacts/"]').first().getAttribute("href");
+await page.goto(base + href);
+await page.click("[data-tab=files]").catch(()=>{});
+await page.locator('input[type=file]').first().setInputFiles(svg);
+const sub = page.locator("form:has(input[type=file]) button[type=submit]").first();
+if (await sub.count()) await sub.click();
+await page.waitForTimeout(2500);
+console.log("uploaded:", (await page.locator("body").innerText()).includes("attack.svg"));
+await browser.close();

@@ -1,0 +1,11 @@
+import { launch, login, base, shots, ok } from "./_lib.mjs";
+const { browser, page } = await launch();
+await login(page);
+await page.goto(base + "/contacts");
+await page.click("[data-open=contact-dialog]");
+await page.fill("#contact-dialog #first_name", "Priya");
+console.log("ids matching #email:", await page.evaluate(() => Array.from(document.querySelectorAll("#email")).map((e) => e.outerHTML.slice(0, 80))));
+await page.fill("#contact-dialog #email", "x@acme.in");
+console.log("first_name:", await page.inputValue("#contact-dialog #first_name"), "| email:", await page.inputValue("#contact-dialog #email"));
+await page.screenshot({ path: `${shots}/dbg-dialog.png` });
+await browser.close();

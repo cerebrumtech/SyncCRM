@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Press F5 to start the app. Opens the browser; no debugger attached.
+      "name": "Run SyncCRM (127.0.0.1:8080)",
+      "type": "php",
+      "request": "launch",
+      "runtimeArgs": ["-S", "127.0.0.1:8080", "-t", "public", "dev/router.php"],
+      "cwd": "${workspaceFolder}",
+      "port": 0,
+      "serverReadyAction": { "action": "openExternally", "pattern": "Development Server \\(http://127.0.0.1:8080\\) started" }
+    },
+    {
+      // Needs Xdebug installed and `xdebug.mode=debug,develop` + `xdebug.start_with_request=yes`
+      // in php.ini. Start the app separately with `bash dev/serve.sh`, then press F5 here.
+      "name": "Attach Xdebug (port 9003)",
+      "type": "php",
+      "request": "launch",
+      "port": 9003
+    }
+  ]
+}

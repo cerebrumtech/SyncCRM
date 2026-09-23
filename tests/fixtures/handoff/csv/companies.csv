@@ -1,0 +1,3 @@
+id,name,industry,city,district,state,country,phone,alt_phone,email,website,address,description,branches,deposits_cr,loan_book_cr,loan_customers,tags,owner_email,owner_name,contact_count,deal_count,first_seen_date,source_sheets,imported_at
+c1,Nagebaba Multistate,Multi-State Co-operative Credit Society,Latur,Latur,Maharashtra,India,9822011111,9822011112,info@nagebaba.coop,,Main Rd Latur,Large society,9,45.50,30.25,12000,client|hot,owner@syncworkstech.com,Hanuman Kale,1,1,2026-01-10,Won Clients,2026-09-23T10:00:00+05:30
+c2,भवानी अर्बन को-ऑपरेटिव्ह क्रेडिट सोसायटी,Co-operative Credit Society,Pune,Pune,Maharashtra,India,9822022222,,,,,,,,,,cold-list,monika@syncworkstech.com,Monika,0,0,,Colad Calling List 2,2026-09-23T10:00:00+05:30

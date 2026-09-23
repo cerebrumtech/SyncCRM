@@ -165,6 +165,61 @@ alongside real data.
 
 Sign in as `owner@syncworkstech.com` / `password123` (also `admin@`, `rahul@`, `priya@`).
 
+## Loading the sales hand-off
+
+The real sales data is exported from the team's spreadsheet into a folder of CSVs. Getting
+it onto the server is two steps, and the first one checks its own work.
+
+### 1. Fetch the export
+
+`deploy/fetch-handoff.sh` downloads the folder from Google Drive and verifies each file
+before the import ever sees it: not a Drive sign-in page, not empty, the expected header
+for a CSV, and for the workbook, that it opens and which tabs it has. It refuses a path
+that would escape the target directory.
+
+```bash
+cd ~/applications/dhrwuuxpcs/public_html
+bash deploy/fetch-handoff.sh ~/handoff-manifest.txt
+```
+
+The manifest is three whitespace-separated columns — Drive file id, path under the target
+directory, and the check:
+
+```
+1abc…   csv/users.csv          id,email,name
+1def…   synccrm-export.xlsx    @xlsx
+1ghi…   IMPORT_GUIDE.md        -
+```
+
+`@xlsx` means "open it and list its tabs"; `-` means "not empty and not a web page" only.
+
+The manifest is not in this repository and must not be. For a link-shared Drive folder the
+file id *is* the access key, and this repository is public. Keep the manifest outside the
+web root, and delete it once the fetch has run. Revoke the link sharing on the Drive folder
+as soon as every line reads `ok`.
+
+Files land in `private_html/SyncCRM-Export`, outside the web root, so the sales data is
+never reachable over HTTP.
+
+### 2. Import it
+
+```bash
+php schema/import-handoff.php --dir=~/applications/dhrwuuxpcs/private_html/SyncCRM-Export --dry-run
+```
+
+`--dry-run` performs the whole import inside a transaction and rolls it back, so the report
+comes from a real load rather than a guess. It refuses to finish if any table's row count
+does not match its file. Read the report, then repeat with `--commit`.
+
+The import **clears the demo workspace first** — unlike `install.php --seed`, this one
+deletes. Do not run it against a database that already holds real data you want to keep.
+
+Two files in the export are review lists rather than records, and are carried in rather
+than left behind: `possible_duplicate_companies.csv` tags both companies in each suspected
+pair `possible-duplicate` and writes a note on each naming the other, and
+`unassigned_phone_numbers.csv` — numbers belonging to no person and no society — is listed
+in the import report rather than invented into contacts nobody can identify.
+
 ## Branches
 
 `main` and `php-codeigniter` hold identical content. `main` is the default branch; the
