@@ -53,7 +53,7 @@ fetch() {
 }
 
 ok=0; bad=0
-while read -r ID REL CHECK; do
+while read -r ID REL CHECK || [ -n "${ID:-}" ]; do
   case "$ID" in ''|'#'*) continue ;; esac
   case "$REL" in /*|*..*) echo "REFUSED   $REL -- path escapes the target directory"; bad=$((bad+1)); continue ;; esac
 
