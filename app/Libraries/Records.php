@@ -28,7 +28,11 @@ class Records
             throw new FormError('Unknown record type.');
         }
         $model = model($classes[$entity]);
-        return $model->findInOrg($orgId, $id) ?? throw new FormError('Record not found.');
+        $record = $model->findInOrg($orgId, $id);
+        if ($record === null) {
+            throw new FormError('Record not found.');
+        }
+        return $record;
     }
 
     public static function path(string $entity, int $id): string
