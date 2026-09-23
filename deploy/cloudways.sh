@@ -112,12 +112,34 @@ chmod -R 775 writable "$APP_ROOT/private_html/uploads" 2>/dev/null || true
 # --- compile check --------------------------------------------------------------------------
 # The server's own PHP is the authority on whether this code runs here. Catch any
 # incompatibility now, with a clear message, rather than as a fatal error mid-request.
+# --- the checkout must actually be an application ------------------------------------------
+# A commit can be structurally valid and still be missing everything: an empty tree passes
+# the compile check below, because a loop over no files reports no failures.
+echo "== Checking the checkout is complete"
+MISSING=()
+for required in public/index.php kernel/bootstrap.php schema/schema.sql app/Config/Routes.php; do
+  [[ -f "$required" ]] || MISSING+=("$required")
+done
+# The directories may not exist at all, and find then fails the pipeline under
+# 'set -e -o pipefail', which would kill the script before it can report or roll back.
+PHP_COUNT=$({ find app kernel public schema -name '*.php' 2>/dev/null || true; } | wc -l)
+if [[ ${#MISSING[@]} -gt 0 || "$PHP_COUNT" -lt 50 ]]; then
+  echo "This checkout does not look like SyncCRM: ${#MISSING[@]} required file(s) absent, ${PHP_COUNT} PHP files found." >&2
+  [[ ${#MISSING[@]} -gt 0 ]] && printf '  missing: %s\n' "${MISSING[@]}" >&2
+  if [[ -n "$PREV_SHA" ]]; then
+    git -C "$WEB" reset --hard "$PREV_SHA" >/dev/null 2>&1 \
+      && echo "Rolled the site back to $PREV_SHA. Nothing was changed in the database." >&2
+  fi
+  exit 1
+fi
+echo "Checkout looks complete (${PHP_COUNT} PHP files)."
+
 echo "== Checking the code compiles on $PHP"
 LINT_OUT="$(mktemp)"
 LINT_FAIL=0
 while IFS= read -r f; do
   if ! "$PHP" -l "$f" >/dev/null 2>>"$LINT_OUT"; then LINT_FAIL=1; fi
-done < <(find app kernel public schema -name '*.php' 2>/dev/null)
+done < <({ find app kernel public schema -name '*.php' 2>/dev/null || true; })
 if [[ $LINT_FAIL -ne 0 ]]; then
   echo "This code does not compile on $("$PHP" -r 'echo PHP_VERSION;'). Nothing was changed in the database." >&2
   sed -n '1,20p' "$LINT_OUT" >&2

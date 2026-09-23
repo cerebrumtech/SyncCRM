@@ -9,6 +9,34 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-23
 
+- **CRM-34** `chore` A deploy can no longer install an incomplete checkout. An empty commit
+  passed the compile check, because a loop over no files reports no failures; the installer
+  now requires the application's key files and a plausible PHP file count, and rolls back
+  when they are absent. Found the hard way: an empty tree was pushed and merged to `main`.
+
+- **CRM-34** `bug` Deleting a company destroyed its contacts and deals; deleting a contact
+  destroyed its deals. Three foreign keys shipped as `ON DELETE CASCADE ON UPDATE SET NULL`,
+  the two clauses the wrong way round, while the confirmation dialog promised the records
+  would only lose the link. Removing one company took 2 contacts, 1 deal, 1 activity, 2 line
+  items and every note with it. Now `ON DELETE SET NULL ON UPDATE CASCADE`, with an
+  idempotent repair for databases that already have the old rules.
+
+- **CRM-34** `bug` The Content-Security-Policy forbade inline script and silently broke three
+  screens: the custom-field Options box never appeared for a dropdown, the stage editor
+  stopped pre-ticking required fields, and a linked activity was no longer highlighted. All
+  three moved into `app.js`, with tests.
+
+- **CRM-34** `bug` Stored XSS: an uploaded file was served with the type its uploader claimed,
+  and images, text and PDFs were served inline, so an ordinary `.svg` carrying `<script>` ran
+  on this origin with the viewer's session. Types are now read from the bytes and only a
+  short allowlist renders in place.
+
+- **CRM-34** `improvement` Sign-in throttling, security headers (CSP, X-Frame-Options,
+  Referrer-Policy, HSTS), and a duplicate-detection key that is no longer invented from a
+  phone-number fragment.
+
+## 2026-09-23 (earlier)
+
 - **CRM-29** `chore` Deploy on push instead of by hand. `deploy/auto-update.sh` runs from
   cron and deploys when the tracked branch moves; `cloudways.sh` now records the running
   commit and restores it if the new code fails the compile check, so a commit that cannot
