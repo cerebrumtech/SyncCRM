@@ -20,6 +20,14 @@ class Connection
 
     public function __construct(array $cfg)
     {
+        // Blank credentials almost always mean .env was not read, so name that cause
+        // instead of letting MySQL report a puzzling "Access denied for user ''".
+        if (($cfg['username'] ?? '') === '' || ($cfg['database'] ?? '') === '') {
+            throw new RuntimeException(
+                'No database credentials. The .env file was not read: check that it exists in the'
+                . ' application root and is readable by the user PHP runs as.'
+            );
+        }
         $dsn = sprintf(
             'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
             $cfg['hostname'] ?? 'localhost',

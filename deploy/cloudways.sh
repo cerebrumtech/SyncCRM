@@ -92,11 +92,19 @@ database.default.username = $DB_USER
 database.default.password = $DB_PASS
 database.default.port = ${DB_PORT:-3306}
 ENV
-  chmod 600 .env
   echo "Wrote .env"
 fi
+# The installer may run as a different user than PHP-FPM (on Cloudways, your SSH login
+# versus the application user). Both must be able to read .env, so share it by group
+# rather than locking it to the owner. Still not world-readable.
+WEB_GROUP="$(stat -c '%G' "$WEB" 2>/dev/null || echo '')"
+if [[ -n "$WEB_GROUP" && "$WEB_GROUP" != "UNKNOWN" ]]; then
+  chgrp "$WEB_GROUP" .env 2>/dev/null || true
+fi
+chmod 640 .env 2>/dev/null || true
 mkdir -p "$APP_ROOT/private_html/uploads" writable/logs writable/imports writable/uploads
 chmod -R 775 writable "$APP_ROOT/private_html/uploads" 2>/dev/null || true
+[[ -n "$WEB_GROUP" && "$WEB_GROUP" != "UNKNOWN" ]] && chgrp -R "$WEB_GROUP" writable "$APP_ROOT/private_html/uploads" 2>/dev/null || true
 
 # --- compile check --------------------------------------------------------------------------
 # The server's own PHP is the authority on whether this code runs here. Catch any
