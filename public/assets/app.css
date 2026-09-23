@@ -32,3 +32,28 @@ dialog.modal::backdrop {
 body:has(dialog.modal[open]) {
   overflow: hidden;
 }
+
+/* ------------------------------------------------------------------------------
+   Touch targets. Scoped to coarse pointers so a mouse keeps the compact desktop
+   layout; field sales use this on phones, where a 24px delete button next to a
+   row of data is easy to hit by accident and hard to hit on purpose.
+   44px is the size both Apple and Google publish as the comfortable minimum.
+   ------------------------------------------------------------------------------ */
+@media (pointer: coarse) {
+  button, .btn, select, a.link, [role="button"] {
+    min-height: 44px;
+  }
+  /* Icon-only controls need width as well as height. */
+  button:not(.btn), [role="button"]:not(.btn) {
+    min-width: 44px;
+  }
+  /* A checkbox cannot grow by padding, so scale it instead. */
+  input[type="checkbox"], input[type="radio"] {
+    width: 20px;
+    height: 20px;
+  }
+  /* Inline links inside prose keep their flow; only stand-alone ones grow. */
+  p a.link, td a.link, li a.link {
+    min-height: 0;
+  }
+}
