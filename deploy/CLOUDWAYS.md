@@ -1,64 +1,54 @@
 # Hosting SyncCRM on Cloudways
 
-Cloudways is a PHP-oriented platform: no root access, no Docker and no PostgreSQL. SyncCRM still runs there with this layout:
+SyncCRM is a plain PHP application: **PHP 7.4+ and MySQL, no Composer, no build step**. It runs on a standard Cloudways PHP application without changing anything server-wide.
 
-- **App** — Node.js 22 installed with nvm in the application's SSH user home, run by PM2 on the first free port from 3000 up, with Apache forwarding traffic via `.htaccess`. The build's static assets (`_next/static`, `public/`) are copied into `public_html` because Cloudways' nginx serves files that exist there directly and only passes the rest to Apache.
-- **Database** — a managed PostgreSQL outside Cloudways (Neon, Supabase, DigitalOcean Managed DB, etc.). Cloudways servers reach it over SSL.
-- **Files** — uploads stay on the Cloudways disk under `private_html/synccrm/uploads`.
+## 1. Panel, once
 
-## 1. Cloudways panel
+1. Applications → **Add Application** → *PHP* (Custom App), name it `SyncCRM`. Note the app folder shown under **Access Details**, for example `dhrwuuxpcs`.
+2. Application → **Domain Management** → add your domain and point DNS at the server, then **SSL Certificate** → Let's Encrypt.
+3. Application → **Access Details** → **MySQL Access**: note the database name, username and password.
 
-1. Applications → **Add Application** → type **Custom App** (PHP), name `synccrm`.
-2. Application → **Domain Management** → add your domain (e.g. `crm.syncworkstech.com`) and point its DNS at the server IP.
-3. Application → **SSL Certificate** → Let's Encrypt for that domain.
-4. Application → **Application Settings** → **General** tab → set **Varnish** to *Disabled* (authenticated pages must never be cached). If that tab has no Varnish switch, open the **Varnish** tab and add an exclusion: Type *URL*, Method *Contains*, Value `/`.
-5. Application → **Access Details** → note the **SSH/SFTP username, password, server IP** and the application folder name.
-6. Server → **Security** → allow your IP for SSH if it is restricted.
+You do **not** need to change the server's PHP version. The app runs on the 7.4 that Cloudways servers commonly ship.
 
-## 2. PostgreSQL
+## 2. Install, one paste over SSH
 
-Create a Postgres 16 database (e.g. [Neon](https://neon.tech) — the free tier is enough to start; choose the Singapore region for India). Copy the connection string; it looks like
-`postgresql://user:password@host/dbname?sslmode=require`.
-
-## Does this affect other applications on the server?
-
-No. The script only writes inside the SyncCRM application folder (`private_html/synccrm` for the code and uploads, one `.htaccess` in its `public_html`) and inside the SSH user's home (`~/.nvm`, `~/.pm2`). It never touches other applications' folders, PHP, MySQL, Apache/nginx config or Varnish for other apps. Safeguards: it refuses to run when the SSH user can see several applications and none is chosen, and it refuses to install into a `public_html` that already has files.
-
-Resources: the app itself uses ~300–500 MB RAM. The one-time `next build` needs ~1.5 GB free for a few minutes — on a 1 GB Cloudways server run the install at a quiet time or resize to 2 GB first. Port 3000 is only used locally on the server (set `PORT=3001` if something else already listens there).
-
-## 3. Install (once, over SSH)
+Open the Cloudways SSH terminal (Servers → your server → Master Credentials → Launch SSH Terminal), sign in, and paste:
 
 ```bash
-ssh <ssh-user>@<server-ip>
-DATABASE_URL='postgresql://user:password@host/dbname?sslmode=require' \
-APP_URL='https://crm.syncworkstech.com' \
-bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/main/deploy/cloudways.sh) install
+APP_NAME=dhrwuuxpcs \
+DB_NAME='xxxxxxxx' DB_USER='xxxxxxxx' DB_PASS='xxxxxxxx' \
+APP_URL='https://crm.syncworks.app' \
+bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/php-codeigniter/deploy/cloudways.sh) install
 ```
 
-Use the **application's own SSH credentials** (Application → Access Details → Application Credentials) so the script can only see that one app. If you use the server's master user instead, add `APP_NAME=<folder name>` (the folder shown under Access Details, e.g. `APP_NAME=abcdefghij`) in front of the command.
+Add `SEED=1` in front to load the demo workspace.
 
-The script installs Node + pnpm + PM2 (user-level, no root), clones the repo into `private_html/synccrm`, writes `.env`, applies the database migrations, builds, starts the app and writes the Apache proxy `.htaccess` into `public_html`.
+The script clones the repository into the application's `public_html`, writes `.env` with a random one-time install key, creates the database tables, and prints the last two steps:
 
-Then add the watchdog cron in the panel (Application → **Cron Job Management** → Advanced), running every minute:
+4. Application Settings → **General** → **Webroot** = `public_html/public`. The field already contains `public_html/`; add `public` on the end. Do this after the install, because the folder must exist first.
+5. Application Settings → **Varnish** → *Disabled*, so signed-in pages are never cached.
 
-```
-* * * * *  /home/<ssh-user>/applications/<app>/private_html/synccrm/deploy/cloudways-watchdog.sh
-```
+Open the domain. The first visit shows **Set up your workspace**, unless you seeded demo data.
 
-It restarts the app after reboots or crashes. Optional demo data: `cd ~/applications/<app>/private_html/synccrm && pnpm db:seed`.
-
-## 4. Update to the latest code
+## 3. Update to the latest code
 
 ```bash
-ssh <ssh-user>@<server-ip>
-~/applications/<app>/private_html/synccrm/deploy/cloudways.sh update
+APP_NAME=dhrwuuxpcs ~/applications/dhrwuuxpcs/public_html/deploy/cloudways.sh update
 ```
+
+## Does this affect the other applications on the server?
+
+No. The script writes only inside this application's folder: the code in `public_html`, uploads in `private_html/uploads`, and the app's own MySQL database. It uses no root access and changes no nginx, Apache, Varnish, PHP-FPM or MySQL configuration, and it does not change the server's PHP version. It refuses to run if it can see several applications and none is named, and refuses to overwrite a `public_html` belonging to another app.
+
+## No shell access?
+
+Open `https://your-domain/install?key=<app.installKey from .env>` to create the tables from the browser. Clear `app.installKey` in `.env` afterwards.
 
 ## Troubleshooting
 
-- **500 / "Proxy Error" from Apache** — `mod_proxy` is not enabled on that server. Ask Cloudways support to enable `mod_proxy` and `mod_proxy_http` for the application (they do this on request), then reload the page.
-- **Stale pages after login/logout** — Varnish is still on; disable it in Application Settings → General (or add a URL exclusion for `/` on the Varnish tab) and purge.
-- **"403 Forbidden / nginx" on the home page** — nginx answers `/` from `public_html` and needs the redirecting `index.html` the installer writes there (`deploy/cloudways-index.html`); rerun `update`. A Cloudways placeholder page instead means the install never ran for this app.
-- **"Proxy Error" / 500 on `/login`** — see the first item above (`mod_proxy`).
-- **App not running** — `pm2 logs synccrm` shows the reason; `pm2 restart synccrm` restarts it. The watchdog cron does the same automatically.
-- **Database connection refused** — the Postgres provider must allow connections from the Cloudways server IP (Neon allows all by default; others need an allow-list).
+- **403 Forbidden from nginx** — the app is not installed yet, or the Webroot is still `public_html/`. Set it to `public_html/public`.
+- **500, blank page** — check `public_html/writable/logs/`. Usually `writable/` is not writable: `chmod -R 775 writable`.
+- **Styles missing** — the Webroot is wrong, or Varnish is still caching. Purge it.
+- **Stale pages after login or logout** — Varnish is still enabled for this app.
+- **Database connection failed** — re-check the MySQL values in `.env`; the host is `localhost`.
+- **"needs PHP 7.4 or newer"** — the application is being served by an older PHP. Raise it in the panel.
