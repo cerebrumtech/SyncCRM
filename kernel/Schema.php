@@ -32,7 +32,68 @@ class Schema
             $db->query('SET FOREIGN_KEY_CHECKS = 1');
         }
         $applied += self::repairDeleteRules($db);
+        $applied += self::addMissingColumns($db);
         return $applied;
+    }
+
+    /**
+     * Columns added after the first release. CREATE TABLE leaves an existing table
+     * alone, so a database installed earlier would never gain them; this adds any
+     * that are absent and leaves the rest untouched.
+     */
+    private static function addMissingColumns($db): int
+    {
+        $wanted = [
+            'companies' => [
+                'alt_phone'      => "varchar(30) DEFAULT NULL AFTER `phone`",
+                'district'       => "varchar(80) DEFAULT NULL AFTER `postal_code`",
+                'branches'       => "smallint(5) unsigned DEFAULT NULL",
+                'deposits_cr'    => "decimal(12,2) DEFAULT NULL",
+                'loan_book_cr'   => "decimal(12,2) DEFAULT NULL",
+                'loan_customers' => "int(10) unsigned DEFAULT NULL",
+                'legacy_id'      => "varchar(40) DEFAULT NULL",
+            ],
+            'contacts' => [
+                'alt_phone' => "varchar(30) DEFAULT NULL",
+                'legacy_id' => "varchar(40) DEFAULT NULL",
+            ],
+            'deals' => [
+                'proposal_amount'    => "decimal(14,2) DEFAULT NULL",
+                'amount_received'    => "decimal(14,2) DEFAULT NULL",
+                'amount_pending'     => "decimal(14,2) DEFAULT NULL",
+                'lead_source'        => "varchar(60) DEFAULT NULL",
+                'original_lead_id'   => "varchar(20) DEFAULT NULL",
+                'interest_level_pct' => "tinyint(3) unsigned DEFAULT NULL",
+                'agreement_signed'   => "tinyint(1) NOT NULL DEFAULT 0",
+                'lead_date'          => "date DEFAULT NULL",
+                'legacy_id'          => "varchar(40) DEFAULT NULL",
+            ],
+        ];
+        $added = 0;
+        foreach ($wanted as $table => $columns) {
+            $have = [];
+            foreach ($db->query(
+                'SELECT COLUMN_NAME FROM information_schema.COLUMNS'
+                . ' WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+                [$table]
+            )->getResultArray() as $row) {
+                $have[$row['COLUMN_NAME']] = true;
+            }
+            if (! $have) {
+                continue; // table itself is missing; the CREATE above handles that
+            }
+            foreach ($columns as $name => $definition) {
+                if (isset($have[$name])) {
+                    continue;
+                }
+                $db->query("ALTER TABLE `{$table}` ADD COLUMN `{$name}` {$definition}");
+                $added++;
+            }
+        }
+        if ($added > 0) {
+            echo "Added {$added} column(s) for data the spreadsheet carries.\n";
+        }
+        return $added;
     }
 
     /**
