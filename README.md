@@ -101,10 +101,15 @@ writable/               logs and uploads (uploads move outside the web root in p
 
 PHP 7.4 itself is past end of life and no longer receives security patches. Moving the server to PHP 8 remains worthwhile; this app already runs there unchanged.
 
-## Tracking
+## Tracking and process
 
 Jira project **CRM** (SyncCRM) at ensurechat.atlassian.net. `CRM-29` carries the deployment
 record.
+
+The application is live and in daily use, so changes follow a defined process:
+**[docs/PROCESS.md](docs/PROCESS.md)** — how work is proposed, approved, tested, deployed
+and verified, and the extra handling schema changes get. Every deployed change is recorded
+in **[CHANGELOG.md](CHANGELOG.md)**.
 
 `main` and `php-codeigniter` hold identical content; the server tracks the latter, whose
 name is historical — there is no CodeIgniter here. The earlier Next.js/PostgreSQL
