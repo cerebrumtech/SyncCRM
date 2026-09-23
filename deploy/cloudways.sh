@@ -54,8 +54,11 @@ if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
 fi
 
 # --- source code into public_html ---------------------------------------------------------
+PREV_SHA=""
 if [[ -f "$WEB/public/index.php" && -d "$WEB/.git" ]]; then
   echo "== Updating existing SyncCRM checkout"
+  # Remember where we were, so a commit that will not run here can be undone.
+  PREV_SHA="$(git -C "$WEB" rev-parse HEAD 2>/dev/null || echo '')"
   git -C "$WEB" fetch --depth 1 origin "$BRANCH"
   git -C "$WEB" reset --hard "origin/$BRANCH"
 else
@@ -119,6 +122,12 @@ if [[ $LINT_FAIL -ne 0 ]]; then
   echo "This code does not compile on $("$PHP" -r 'echo PHP_VERSION;'). Nothing was changed in the database." >&2
   sed -n '1,20p' "$LINT_OUT" >&2
   rm -f "$LINT_OUT"
+  # An update already replaced the working tree, so put the running version back
+  # rather than leaving the site on code the server cannot parse.
+  if [[ -n "$PREV_SHA" ]]; then
+    git -C "$WEB" reset --hard "$PREV_SHA" >/dev/null 2>&1 \
+      && echo "Rolled the site back to $PREV_SHA, which was running before this update." >&2
+  fi
   exit 1
 fi
 rm -f "$LINT_OUT"

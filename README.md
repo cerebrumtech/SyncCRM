@@ -19,9 +19,15 @@ php -S 127.0.0.1:8080 -t public # http://127.0.0.1:8080
 
 Demo sign-in: `owner@syncworkstech.com` / `password123`, plus `admin@`, `rahul@` and `priya@` on the same password. Without the seed, the first visit opens `/setup`.
 
-## Deploy on Cloudways
+## Deploy
 
-See [deploy/CLOUDWAYS.md](deploy/CLOUDWAYS.md). One pasted SSH command, then set the Webroot to `public_html/public` and turn Varnish off.
+Live at **https://crm.syncworks.app** on Cloudways. A push to the deployed branch is all a
+release takes: a cron on the server runs `deploy/auto-update.sh`, which compile-checks the
+code on the server's own PHP and rolls back if it does not parse.
+
+Everything about production — how nginx and PHP-FPM are wired, the panel settings, the
+deploy sequence, the PHP 7.4 constraint, troubleshooting — is in
+**[deploy/CLOUDWAYS.md](deploy/CLOUDWAYS.md)**. Read it before touching the server.
 
 ## What's in it
 
@@ -34,6 +40,40 @@ See [deploy/CLOUDWAYS.md](deploy/CLOUDWAYS.md). One pasted SSH command, then set
 - **Data** — saved views, CSV export per module, CSV import with column mapping and duplicate handling
 
 Indian defaults throughout: ₹ with lakh and crore grouping, DD/MM/YYYY dates, Asia/Kolkata time.
+
+## How a request flows
+
+```
+nginx  ──try_files──▶  public/index.php
+                          │  kernel/bootstrap.php  loads .env, autoloads Sync\* and App\*
+                          │  session()->start()    cookie session, HttpOnly + SameSite
+                          │  Csrf::verify()        every non-GET request
+                          ▼
+                       Sync\Router          matches app/Config/Routes.php
+                          │                 runs 'auth' / 'admin' filters
+                          ▼
+                       App\Controllers\*   one controller per module
+                          │  model(FooModel::class)->…   via kernel/Database/QueryBuilder
+                          ▼
+                       view('name', $data)  kernel/View renders app/Views + a layout
+```
+
+`public/index.php` catches everything: `SecurityError` → 403, `PageNotFound` → 404, any
+other `Throwable` → 500 with the class, message, file, line and trace appended to
+`writable/logs/error-YYYY-MM-DD.log`. The browser only ever sees a generic message in
+production, so **the log is where you look**.
+
+Every row is scoped to an organisation. Models expose `findInOrg()` and friends rather than
+raw finders, so a missing `organization_id` filter is hard to write by accident.
+
+## Adding a module
+
+1. Table in `schema/schema.sql` (the installer applies it; it is idempotent).
+2. Model in `app/Models` — set `$casts` for JSON and integer columns.
+3. Controller in `app/Controllers`, extending `BaseController` for `fail()` and the current
+   user/organisation helpers.
+4. Route in `app/Config/Routes.php`, with the `auth` filter (and `admin` where relevant).
+5. Views in `app/Views`; layouts and partials already handle chrome and navigation.
 
 ## Layout
 
@@ -63,4 +103,9 @@ PHP 7.4 itself is past end of life and no longer receives security patches. Movi
 
 ## Tracking
 
-Jira project **CRM** (SyncCRM) at ensurechat.atlassian.net.
+Jira project **CRM** (SyncCRM) at ensurechat.atlassian.net. `CRM-29` carries the deployment
+record.
+
+`main` and `php-codeigniter` hold identical content; the server tracks the latter, whose
+name is historical — there is no CodeIgniter here. The earlier Next.js/PostgreSQL
+implementation remains in `main`'s history, ending at `ce5a6a3`.
