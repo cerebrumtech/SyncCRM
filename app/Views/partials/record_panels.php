@@ -14,7 +14,7 @@ $tabs['files'] = ['Files', count($files)];
   <div data-panel="timeline">
     <?php if (! $timeline): ?><p class="muted text-[13px]">Nothing here yet. Notes, activities, files and changes will appear in order.</p><?php endif ?>
     <ol class="relative ml-2 space-y-4 border-l border-line-100 pl-5">
-      <?php foreach ($timeline as $t): $iconName = match ($t['kind']) { 'note' => 'note', 'file' => 'file', 'activity' => 'activities', default => 'clock' }; ?>
+      <?php foreach ($timeline as $t): $iconName = pick($t['kind'], ['note' => 'note', 'file' => 'file', 'activity' => 'activities'], 'clock'); ?>
         <li class="relative"><span class="absolute -left-[29px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-50 text-primary"><?= icon($iconName, 'h-2.5 w-2.5') ?></span>
           <div class="flex flex-wrap items-baseline justify-between gap-2"><p class="text-[13px] font-medium"><?= ! empty($t['href']) ? '<a class="hover:text-primary" href="' . esc($t['href'], 'attr') . '">' . esc($t['title']) . '</a>' : esc($t['title']) ?></p><span class="text-xs muted" title="<?= esc(format_datetime($t['at']), 'attr') ?>"><?= relative_time($t['at']) ?></span></div>
           <?php if (! empty($t['detail'])): ?><p class="mt-0.5 whitespace-pre-line text-[13px] text-ink-700"><?= esc($t['detail']) ?></p><?php endif ?>

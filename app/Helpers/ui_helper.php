@@ -23,17 +23,17 @@ function tag_badges(?array $tags): string
 
 function deal_status_badge(string $status): string
 {
-    return badge(ucfirst(strtolower($status)), match ($status) { 'WON' => 'success', 'LOST' => 'danger', default => 'info' });
+    return badge(ucfirst(strtolower($status)), pick($status, ['WON' => 'success', 'LOST' => 'danger'], 'info'));
 }
 
 function activity_status_badge(string $status): string
 {
-    return badge(ucfirst(strtolower($status)), match ($status) { 'COMPLETED' => 'success', 'CANCELLED' => 'neutral', default => 'warning' });
+    return badge(ucfirst(strtolower($status)), pick($status, ['COMPLETED' => 'success', 'CANCELLED' => 'neutral'], 'warning'));
 }
 
 function activity_type_label(string $type): string
 {
-    return match ($type) { 'CALL' => 'Call', 'EVENT' => 'Meeting', default => 'Task' };
+    return pick($type, ['CALL' => 'Call', 'EVENT' => 'Meeting'], 'Task');
 }
 
 function role_label(string $role): string

@@ -12,13 +12,18 @@ class Dashboard extends BaseController
 
     private function since(string $key): ?string
     {
-        return match ($key) {
-            'month' => date('Y-m-01 00:00:00'),
-            'last30' => date('Y-m-d 00:00:00', strtotime('-30 days')),
-            'quarter' => date('Y-m-d 00:00:00', mktime(0, 0, 0, (int) (floor((date('n') - 1) / 3) * 3 + 1), 1, (int) date('Y'))),
-            'year' => date('Y-01-01 00:00:00'),
-            default => null,
-        };
+        switch ($key) {
+            case 'month':
+                return date('Y-m-01 00:00:00');
+            case 'last30':
+                return date('Y-m-d 00:00:00', strtotime('-30 days'));
+            case 'quarter':
+                return date('Y-m-d 00:00:00', mktime(0, 0, 0, (int) (floor((date('n') - 1) / 3) * 3 + 1), 1, (int) date('Y')));
+            case 'year':
+                return date('Y-01-01 00:00:00');
+            default:
+                return null;
+        }
     }
 
     public function index()

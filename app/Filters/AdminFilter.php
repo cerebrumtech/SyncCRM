@@ -4,13 +4,11 @@ namespace App\Filters;
 
 use App\Libraries\Auth;
 use App\Libraries\Permissions;
-use CodeIgniter\Filters\FilterInterface;
-use CodeIgniter\HTTP\RequestInterface;
-use CodeIgniter\HTTP\ResponseInterface;
+use Sync\Http\Request;
 
-class AdminFilter implements FilterInterface
+class AdminFilter 
 {
-    public function before(RequestInterface $request, $arguments = null)
+    public function before(Request $request)
     {
         $user = Auth::user();
         if ($user && Permissions::isAdmin($user)) {
@@ -19,8 +17,4 @@ class AdminFilter implements FilterInterface
         return redirect()->to('/dashboard')->with('error', 'Only admins can open that page.');
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
-    {
-        return null;
-    }
 }

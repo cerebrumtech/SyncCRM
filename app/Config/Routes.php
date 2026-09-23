@@ -1,6 +1,6 @@
 <?php
 
-use CodeIgniter\Router\RouteCollection;
+use Sync\RouteCollection;
 
 /**
  * @var RouteCollection $routes

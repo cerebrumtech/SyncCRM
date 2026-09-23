@@ -4,7 +4,7 @@ namespace App\Libraries;
 
 use App\Models\SavedViewModel;
 use App\Models\UserModel;
-use CodeIgniter\Database\BaseBuilder;
+use Sync\Database\QueryBuilder;
 
 /** Shared list queries (used by pages and CSV export) and small lookups. */
 class Lists
@@ -41,7 +41,7 @@ class Lists
         return $out;
     }
 
-    public static function contacts(int $orgId, array $p): BaseBuilder
+    public static function contacts(int $orgId, array $p): QueryBuilder
     {
         $db = db_connect();
         $b = $db->table('contacts c')
@@ -64,11 +64,11 @@ class Lists
         }
         $sort = $p['sort'] ?? 'updated';
         $dir = ($p['dir'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
-        $b->orderBy(match ($sort) { 'name' => 'c.first_name', 'company' => 'co.name', 'created' => 'c.created_at', default => 'c.updated_at' }, $dir);
+        $b->orderBy(pick($sort, ['name' => 'c.first_name', 'company' => 'co.name', 'created' => 'c.created_at'], 'c.updated_at'), $dir);
         return $b;
     }
 
-    public static function companies(int $orgId, array $p): BaseBuilder
+    public static function companies(int $orgId, array $p): QueryBuilder
     {
         $db = db_connect();
         $b = $db->table('companies co')
@@ -90,11 +90,11 @@ class Lists
         }
         $sort = $p['sort'] ?? 'updated';
         $dir = ($p['dir'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
-        $b->orderBy(match ($sort) { 'name' => 'co.name', 'city' => 'co.city', 'created' => 'co.created_at', default => 'co.updated_at' }, $dir);
+        $b->orderBy(pick($sort, ['name' => 'co.name', 'city' => 'co.city', 'created' => 'co.created_at'], 'co.updated_at'), $dir);
         return $b;
     }
 
-    public static function deals(int $orgId, array $p): BaseBuilder
+    public static function deals(int $orgId, array $p): QueryBuilder
     {
         $db = db_connect();
         $b = $db->table('deals d')
@@ -132,7 +132,7 @@ class Lists
         }
         $sort = $p['sort'] ?? 'updated';
         $dir = ($p['dir'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
-        $b->orderBy(match ($sort) { 'title' => 'd.title', 'amount' => 'd.amount', 'close' => 'd.expected_close_date', 'stage' => 's.position', 'created' => 'd.created_at', default => 'd.updated_at' }, $dir);
+        $b->orderBy(pick($sort, ['title' => 'd.title', 'amount' => 'd.amount', 'close' => 'd.expected_close_date', 'stage' => 's.position', 'created' => 'd.created_at'], 'd.updated_at'), $dir);
         return $b;
     }
 }

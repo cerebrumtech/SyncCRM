@@ -52,16 +52,20 @@ class CustomFields
         return $out;
     }
 
-    public static function display(array $def, mixed $value): string
+    public static function display(array $def, $value): string
     {
         if ($value === null || $value === '') {
             return '—';
         }
-        return match ($def['type']) {
-            'CHECKBOX' => $value ? 'Yes' : 'No',
-            'DATE'     => format_date($value),
-            'NUMBER'   => number_format((float) $value, fmod((float) $value, 1.0) == 0 ? 0 : 2),
-            default    => (string) $value,
-        };
+        if ($def['type'] === 'CHECKBOX') {
+            return $value ? 'Yes' : 'No';
+        }
+        if ($def['type'] === 'DATE') {
+            return format_date($value);
+        }
+        if ($def['type'] === 'NUMBER') {
+            return number_format((float) $value, fmod((float) $value, 1.0) == 0 ? 0 : 2);
+        }
+        return (string) $value;
     }
 }

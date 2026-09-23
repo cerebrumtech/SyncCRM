@@ -33,7 +33,7 @@ class Activities
             return null;
         }
         $d = new \DateTime($a['due_at']);
-        $d->modify(match ($a['recurrence']) { 'DAILY' => '+1 day', 'WEEKLY' => '+1 week', default => '+1 month' });
+        $d->modify(pick($a['recurrence'], ['DAILY' => '+1 day', 'WEEKLY' => '+1 week'], '+1 month'));
         if (! empty($a['recurrence_until']) && $d > new \DateTime($a['recurrence_until'] . ' 23:59:59')) {
             return null;
         }

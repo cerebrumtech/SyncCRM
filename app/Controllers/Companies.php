@@ -43,7 +43,7 @@ class Companies extends BaseController
     {
         $company = model(CompanyModel::class)->findInOrg($this->orgId(), $id);
         if (! $company) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
         }
         $owner = $company['owner_id'] ? model(UserModel::class)->find($company['owner_id']) : null;
         $contacts = Lists::contacts($this->orgId(), ['company' => $id, 'sort' => 'name', 'dir' => 'asc'])->get()->getResultArray();

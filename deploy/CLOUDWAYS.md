@@ -1,17 +1,18 @@
 # Hosting SyncCRM on Cloudways
 
-SyncCRM is a standard PHP 8.1+ / MySQL application (CodeIgniter 4.6), so it runs on a Cloudways **PHP** application with no extra services.
+SyncCRM is a plain PHP application: **PHP 7.4+ and MySQL, no Composer, no build step**. It runs on a standard Cloudways PHP application without changing anything server-wide.
 
-## 1. Cloudways panel (once)
+## 1. Panel, once
 
-1. Applications → **Add Application** → *PHP* (Custom App) → name it `SyncCRM`. Note the app folder name shown under **Access Details** (e.g. `dhrwuuxpcs`).
-2. Server → **Settings & Packages** → PHP version **8.1 or newer** (most Cloudways servers already are; it is a server-wide setting, so leave it alone if it is already 8.1+).
-3. Application → **Domain Management** → add your domain (e.g. `crm.syncworks.app`), point DNS at the server, then **SSL Certificate** → Let's Encrypt.
-4. Application → **Access Details** → **MySQL Access**: note the database name, username and password.
+1. Applications → **Add Application** → *PHP* (Custom App), name it `SyncCRM`. Note the app folder shown under **Access Details**, for example `dhrwuuxpcs`.
+2. Application → **Domain Management** → add your domain and point DNS at the server, then **SSL Certificate** → Let's Encrypt.
+3. Application → **Access Details** → **MySQL Access**: note the database name, username and password.
 
-## 2. Install (one paste over SSH)
+You do **not** need to change the server's PHP version. The app runs on the 7.4 that Cloudways servers commonly ship.
 
-Use the server's master credentials (or the application's own SSH user) and paste, filling in your values:
+## 2. Install, one paste over SSH
+
+Open the Cloudways SSH terminal (Servers → your server → Master Credentials → Launch SSH Terminal), sign in, and paste:
 
 ```bash
 APP_NAME=dhrwuuxpcs \
@@ -20,16 +21,14 @@ APP_URL='https://crm.syncworks.app' \
 bash <(curl -fsSL https://raw.githubusercontent.com/cerebrumtech/SyncCRM/php-codeigniter/deploy/cloudways.sh) install
 ```
 
-Add `SEED=1` in front to load the demo workspace (owner@syncworkstech.com / password123).
+Add `SEED=1` in front to load the demo workspace.
 
-The script clones the repository into the application's `public_html`, runs Composer, writes `.env` (with a random encryption key and a one-time install key), creates the database tables and prints the two panel settings that finish the job:
+The script clones the repository into the application's `public_html`, writes `.env` with a random one-time install key, creates the database tables, and prints the last two steps:
 
-5. Application → **Application Settings** → General → **Webroot** = `public_html/public` (the field already contains `public_html/`; add `public` to the end). Do this *after* the install, because the folder must exist first.
-6. Application → **Application Settings** → **Varnish** = *Disabled* (or add a URL exclusion for `/` on the Varnish tab).
+4. Application Settings → **General** → **Webroot** = `public_html/public`. The field already contains `public_html/`; add `public` on the end. Do this after the install, because the folder must exist first.
+5. Application Settings → **Varnish** → *Disabled*, so signed-in pages are never cached.
 
-Open the domain: the first visit shows **Set up your workspace** (unless you seeded demo data).
-
-Uploaded files are stored in `private_html/uploads` (outside the web root). Everything the script does stays inside this one application's folder; other applications, PHP, MySQL, Apache/nginx and Varnish settings for other apps are untouched.
+Open the domain. The first visit shows **Set up your workspace**, unless you seeded demo data.
 
 ## 3. Update to the latest code
 
@@ -37,16 +36,19 @@ Uploaded files are stored in `private_html/uploads` (outside the web root). Ever
 APP_NAME=dhrwuuxpcs ~/applications/dhrwuuxpcs/public_html/deploy/cloudways.sh update
 ```
 
-(Or use Cloudways' **Deployment via Git** on the app to pull the repository, then run `php spark migrate` in `public_html`.)
+## Does this affect the other applications on the server?
+
+No. The script writes only inside this application's folder: the code in `public_html`, uploads in `private_html/uploads`, and the app's own MySQL database. It uses no root access and changes no nginx, Apache, Varnish, PHP-FPM or MySQL configuration, and it does not change the server's PHP version. It refuses to run if it can see several applications and none is named, and refuses to overwrite a `public_html` belonging to another app.
 
 ## No shell access?
 
-The one-time web installer runs the database setup from the browser: open `https://your-domain/install?key=<app.installKey from .env>`. Remove `app.installKey` from `.env` afterwards.
+Open `https://your-domain/install?key=<app.installKey from .env>` to create the tables from the browser. Clear `app.installKey` in `.env` afterwards.
 
 ## Troubleshooting
 
-- **Blank page / 500** — check `public_html/writable/logs/`. Most often PHP is older than 8.1 or `writable/` is not writable (`chmod -R 775 writable`).
-- **403 Forbidden from nginx** — either the app is not installed yet, or the Webroot is still `public_html/`; set it to `public_html/public`.
-- **Styles missing** — assets are served from `public/assets`; purge Varnish or disable it for this app.
-- **Stale pages after login/logout** — Varnish is still on for this app.
-- **Database connection failed** — re-check the MySQL credentials in `.env` (Access Details → MySQL Access); the host is `localhost`.
+- **403 Forbidden from nginx** — the app is not installed yet, or the Webroot is still `public_html/`. Set it to `public_html/public`.
+- **500, blank page** — check `public_html/writable/logs/`. Usually `writable/` is not writable: `chmod -R 775 writable`.
+- **Styles missing** — the Webroot is wrong, or Varnish is still caching. Purge it.
+- **Stale pages after login or logout** — Varnish is still enabled for this app.
+- **Database connection failed** — re-check the MySQL values in `.env`; the host is `localhost`.
+- **"needs PHP 7.4 or newer"** — the application is being served by an older PHP. Raise it in the panel.

@@ -1,59 +1,68 @@
 <?php
 
-use CodeIgniter\Boot;
-use Config\Paths;
-
-/*
- *---------------------------------------------------------------
- * CHECK PHP VERSION
- *---------------------------------------------------------------
+/**
+ * SyncCRM front controller.
+ * Runs on PHP 7.4 and newer with no third-party dependencies.
  */
 
-$minPhpVersion = '8.2'; // If you update this, don't forget to update `spark`.
-if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
-    $message = sprintf(
-        'Your PHP version must be %s or higher to run CodeIgniter. Current version: %s',
-        $minPhpVersion,
-        PHP_VERSION,
-    );
-
-    header('HTTP/1.1 503 Service Unavailable.', true, 503);
-    echo $message;
-
-    exit(1);
-}
-
-/*
- *---------------------------------------------------------------
- * SET THE CURRENT DIRECTORY
- *---------------------------------------------------------------
- */
-
-// Path to the front controller (this file)
 define('FCPATH', __DIR__ . DIRECTORY_SEPARATOR);
+define('ROOTPATH', dirname(__DIR__) . DIRECTORY_SEPARATOR);
+define('APPPATH', ROOTPATH . 'app' . DIRECTORY_SEPARATOR);
+define('KERNELPATH', ROOTPATH . 'kernel' . DIRECTORY_SEPARATOR);
+define('WRITEPATH', ROOTPATH . 'writable' . DIRECTORY_SEPARATOR);
+define('ASSET_VERSION', '2');
 
-// Ensure the current directory is pointing to the front controller's directory
-if (getcwd() . DIRECTORY_SEPARATOR !== FCPATH) {
-    chdir(FCPATH);
+if (PHP_VERSION_ID < 70400) {
+    http_response_code(500);
+    exit('SyncCRM needs PHP 7.4 or newer. This server runs ' . PHP_VERSION . '.');
 }
 
-/*
- *---------------------------------------------------------------
- * BOOTSTRAP THE APPLICATION
- *---------------------------------------------------------------
- * This process sets up the path constants, loads and registers
- * our autoloader, along with Composer's, loads our constants
- * and fires up an environment-specific bootstrapping.
- */
+require KERNELPATH . 'bootstrap.php';
 
-// LOAD OUR PATHS CONFIG FILE
-// This is the line that might need to be changed, depending on your folder structure.
-require FCPATH . '../app/Config/Paths.php';
-// ^^^ Change this line if you move your application folder
+$config = Sync\Config::get();
+ini_set('display_errors', $config->debug ? '1' : '0');
+error_reporting($config->debug ? E_ALL : E_ALL & ~E_DEPRECATED & ~E_NOTICE);
 
-$paths = new Paths();
+session()->start('synccrm_session', 60 * 60 * 24 * 14);
 
-// LOAD THE FRAMEWORK BOOTSTRAP FILE
-require $paths->systemDirectory . '/Boot.php';
+$request  = service('request');
+$response = service('response');
 
-exit(Boot::bootWeb($paths));
+try {
+    Sync\Http\Csrf::verify($request);
+
+    $routes = new Sync\RouteCollection();
+    require APPPATH . 'Config/Routes.php';
+
+    $router = new Sync\Router($routes, [
+        'auth'  => App\Filters\AuthFilter::class,
+        'admin' => App\Filters\AdminFilter::class,
+    ]);
+
+    $result = $router->dispatch($request);
+
+    if ($result instanceof Sync\Http\Response) {
+        $result->send();
+    } elseif (is_string($result)) {
+        echo $result;
+    }
+} catch (Sync\Exceptions\SecurityError $e) {
+    http_response_code(403);
+    echo view('errors/message', ['title' => 'Not allowed', 'message' => $e->getMessage()]);
+} catch (Sync\Exceptions\PageNotFound $e) {
+    http_response_code(404);
+    echo view('errors/message', ['title' => 'Page not found', 'message' => 'That page does not exist.']);
+} catch (Throwable $e) {
+    http_response_code(500);
+    @file_put_contents(
+        WRITEPATH . 'logs/error-' . date('Y-m-d') . '.log',
+        date('c') . ' ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() . PHP_EOL
+            . $e->getTraceAsString() . PHP_EOL . PHP_EOL,
+        FILE_APPEND
+    );
+    if ($config->debug) {
+        echo '<pre>' . esc($e->getMessage() . "\n" . $e->getTraceAsString()) . '</pre>';
+    } else {
+        echo view('errors/message', ['title' => 'Something went wrong', 'message' => 'The error has been logged. Please try again.']);
+    }
+}

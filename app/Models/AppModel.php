@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use CodeIgniter\Model;
+use Sync\Model;
 
 /** Common settings: array rows, datetime timestamps, no validation magic. */
 abstract class AppModel extends Model

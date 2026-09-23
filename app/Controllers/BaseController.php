@@ -5,26 +5,18 @@ namespace App\Controllers;
 use App\Exceptions\FormError;
 use App\Exceptions\Forbidden;
 use App\Libraries\Auth;
-use CodeIgniter\Controller;
-use CodeIgniter\HTTP\CLIRequest;
-use CodeIgniter\HTTP\IncomingRequest;
-use CodeIgniter\HTTP\RequestInterface;
-use CodeIgniter\HTTP\ResponseInterface;
-use Psr\Log\LoggerInterface;
+use Sync\Controller;
+use Sync\Http\Request;
+use Sync\Http\Response;
 
 abstract class BaseController extends Controller
 {
-    /** @var CLIRequest|IncomingRequest */
-    protected $request;
-
-    protected $helpers = ['url', 'form', 'format', 'ui'];
-
     protected ?array $me = null;
     protected ?array $org = null;
 
-    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
+    public function initController(Request $request, Response $response): void
     {
-        parent::initController($request, $response, $logger);
+        parent::initController($request, $response);
         $this->me = Auth::user();
         $this->org = $this->me ? Auth::org() : null;
     }
@@ -66,7 +58,7 @@ abstract class BaseController extends Controller
         return $v === 'on' || $v === '1' || $v === 'true';
     }
 
-    protected function fail(string $message): never
+    protected function fail(string $message): void
     {
         throw new FormError($message);
     }
@@ -89,7 +81,7 @@ abstract class BaseController extends Controller
     }
 
     /** JSON variant: {ok:true,data} or {ok:false,error}. */
-    protected function attemptJson(callable $fn): ResponseInterface
+    protected function attemptJson(callable $fn): Response
     {
         try {
             return $this->response->setJSON(['ok' => true, 'data' => $fn()]);
@@ -104,7 +96,7 @@ abstract class BaseController extends Controller
         return is_array($body) ? $body : $this->request->getPost();
     }
 
-    protected function ok(string $message, string $to): ResponseInterface
+    protected function ok(string $message, string $to): Response
     {
         return redirect()->to($to)->with('success', $message);
     }

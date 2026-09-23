@@ -14,12 +14,20 @@ class Records
 
     public static function parentColumn(string $entity): string
     {
-        return match ($entity) { 'CONTACT' => 'contact_id', 'COMPANY' => 'company_id', 'DEAL' => 'deal_id', default => throw new FormError('Unknown record type.') };
+        $map = ['CONTACT' => 'contact_id', 'COMPANY' => 'company_id', 'DEAL' => 'deal_id'];
+        if (! isset($map[$entity])) {
+            throw new FormError('Unknown record type.');
+        }
+        return $map[$entity];
     }
 
     public static function load(int $orgId, string $entity, int $id): array
     {
-        $model = match ($entity) { 'CONTACT' => model(ContactModel::class), 'COMPANY' => model(CompanyModel::class), 'DEAL' => model(DealModel::class), default => throw new FormError('Unknown record type.') };
+        $classes = ['CONTACT' => ContactModel::class, 'COMPANY' => CompanyModel::class, 'DEAL' => DealModel::class];
+        if (! isset($classes[$entity])) {
+            throw new FormError('Unknown record type.');
+        }
+        $model = model($classes[$entity]);
         return $model->findInOrg($orgId, $id) ?? throw new FormError('Record not found.');
     }
 
@@ -30,7 +38,10 @@ class Records
 
     public static function label(string $entity, array $record): string
     {
-        return match ($entity) { 'CONTACT' => full_name($record), 'COMPANY' => $record['name'], default => $record['title'] };
+        if ($entity === 'CONTACT') {
+            return full_name($record);
+        }
+        return $entity === 'COMPANY' ? $record['name'] : $record['title'];
     }
 
     public static function notes(int $orgId, string $col, int $id): array

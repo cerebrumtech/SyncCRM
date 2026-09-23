@@ -3,13 +3,11 @@
 namespace App\Filters;
 
 use App\Libraries\Auth;
-use CodeIgniter\Filters\FilterInterface;
-use CodeIgniter\HTTP\RequestInterface;
-use CodeIgniter\HTTP\ResponseInterface;
+use Sync\Http\Request;
 
-class AuthFilter implements FilterInterface
+class AuthFilter 
 {
-    public function before(RequestInterface $request, $arguments = null)
+    public function before(Request $request)
     {
         if (Auth::user()) {
             return null;
@@ -21,8 +19,4 @@ class AuthFilter implements FilterInterface
         return redirect()->to('/login' . ($next !== '/' ? '?next=' . rawurlencode($next) : ''));
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
-    {
-        return null;
-    }
 }

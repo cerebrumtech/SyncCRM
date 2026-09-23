@@ -8,7 +8,7 @@ class Audit
 {
     private const HIDDEN = ['password_hash', 'token'];
 
-    public static function log(array $actor, string $action, string $entity, int|string $entityId, ?string $label = null, ?array $before = null, ?array $after = null): void
+    public static function log(array $actor, string $action, string $entity, $entityId, ?string $label = null, ?array $before = null, ?array $after = null): void
     {
         model(AuditLogModel::class)->insert([
             'organization_id' => $actor['organization_id'],

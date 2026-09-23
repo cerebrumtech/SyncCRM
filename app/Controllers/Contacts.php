@@ -47,7 +47,7 @@ class Contacts extends BaseController
     {
         $contact = model(ContactModel::class)->findInOrg($this->orgId(), $id);
         if (! $contact) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
         }
         $company = $contact['company_id'] ? model(CompanyModel::class)->find($contact['company_id']) : null;
         $owner = $contact['owner_id'] ? model(UserModel::class)->find($contact['owner_id']) : null;

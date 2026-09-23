@@ -2,7 +2,13 @@
 
 // Indian formatting: ₹ with lakh/crore grouping, DD/MM/YYYY dates, IST wall-clock (app timezone).
 
-function format_inr(mixed $value, bool $precise = false): string
+/** Array lookup with a fallback. Stands in for match(), which needs PHP 8. */
+function pick($key, array $map, $default)
+{
+    return ($key !== null && array_key_exists($key, $map)) ? $map[$key] : $default;
+}
+
+function format_inr($value, bool $precise = false): string
 {
     $n = is_numeric($value) ? (float) $value : 0.0;
     $neg = $n < 0;
@@ -21,7 +27,7 @@ function format_inr(mixed $value, bool $precise = false): string
     return ($neg ? '-' : '') . '₹' . $whole . $dec;
 }
 
-function format_compact_inr(mixed $value): string
+function format_compact_inr($value): string
 {
     $n = is_numeric($value) ? (float) $value : 0.0;
     $abs = abs($n);
@@ -34,7 +40,7 @@ function format_compact_inr(mixed $value): string
     return format_inr($n);
 }
 
-function to_ts(mixed $d): ?int
+function to_ts($d): ?int
 {
     if ($d === null || $d === '' || $d === '0000-00-00 00:00:00') {
         return null;
@@ -49,25 +55,25 @@ function to_ts(mixed $d): ?int
     return $ts === false ? null : $ts;
 }
 
-function format_date(mixed $d): string
+function format_date($d): string
 {
     $ts = to_ts($d);
     return $ts === null ? '—' : date('d/m/Y', $ts);
 }
 
-function format_datetime(mixed $d): string
+function format_datetime($d): string
 {
     $ts = to_ts($d);
     return $ts === null ? '—' : date('d/m/Y, h:i a', $ts);
 }
 
-function format_time(mixed $d): string
+function format_time($d): string
 {
     $ts = to_ts($d);
     return $ts === null ? '' : date('h:i a', $ts);
 }
 
-function relative_time(mixed $d): string
+function relative_time($d): string
 {
     $ts = to_ts($d);
     if ($ts === null) {
@@ -129,14 +135,14 @@ function slugify(string $s): string
 }
 
 /** Value for <input type="date"> */
-function date_input(mixed $d): string
+function date_input($d): string
 {
     $ts = to_ts($d);
     return $ts === null ? '' : date('Y-m-d', $ts);
 }
 
 /** Value for <input type="datetime-local"> */
-function datetime_input(mixed $d): string
+function datetime_input($d): string
 {
     $ts = to_ts($d);
     return $ts === null ? '' : date('Y-m-d\TH:i', $ts);
@@ -174,7 +180,7 @@ function now_sql(): string
     return date('Y-m-d H:i:s');
 }
 
-function money(mixed $v): float
+function money($v): float
 {
     return is_numeric($v) ? round((float) $v, 2) : 0.0;
 }

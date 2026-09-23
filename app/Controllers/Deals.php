@@ -102,7 +102,7 @@ class Deals extends BaseController
     {
         $deal = model(DealModel::class)->findInOrg($this->orgId(), $id);
         if (! $deal) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
         }
         $pipelines = DealLib::pipelines($this->orgId());
         $pipeline = $this->pipelineFrom($pipelines, $deal['pipeline_id']);

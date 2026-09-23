@@ -4,20 +4,19 @@ namespace App\Database\Seeds;
 
 use App\Libraries\Auth;
 use App\Libraries\Defaults;
-use CodeIgniter\Database\Seeder;
 
 /**
  * Demo workspace for SyncWorks Technologies. Run: php spark db:seed DemoSeeder
  * Safe to re-run: it does nothing when the demo organisation already exists.
  */
-class DemoSeeder extends Seeder
+class DemoSeeder
 {
     private const ORG = 'SyncWorks Technologies Pvt. Ltd.';
     private const PASSWORD = 'password123';
 
     public function run(): void
     {
-        $db = $this->db;
+        $db = db_connect();
         if ($db->table('organizations')->where('name', self::ORG)->countAllResults() > 0) {
             echo "Demo organisation already exists — nothing to do.\n";
             return;
