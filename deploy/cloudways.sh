@@ -98,6 +98,24 @@ fi
 mkdir -p "$APP_ROOT/private_html/uploads" writable/logs writable/imports writable/uploads
 chmod -R 775 writable "$APP_ROOT/private_html/uploads" 2>/dev/null || true
 
+# --- compile check --------------------------------------------------------------------------
+# The server's own PHP is the authority on whether this code runs here. Catch any
+# incompatibility now, with a clear message, rather than as a fatal error mid-request.
+echo "== Checking the code compiles on $PHP"
+LINT_OUT="$(mktemp)"
+LINT_FAIL=0
+while IFS= read -r f; do
+  if ! "$PHP" -l "$f" >/dev/null 2>>"$LINT_OUT"; then LINT_FAIL=1; fi
+done < <(find app kernel public schema -name '*.php' 2>/dev/null)
+if [[ $LINT_FAIL -ne 0 ]]; then
+  echo "This code does not compile on $("$PHP" -r 'echo PHP_VERSION;'). Nothing was changed in the database." >&2
+  sed -n '1,20p' "$LINT_OUT" >&2
+  rm -f "$LINT_OUT"
+  exit 1
+fi
+rm -f "$LINT_OUT"
+echo "All PHP files compile."
+
 # --- database -------------------------------------------------------------------------------
 echo "== Database"
 if [[ "${SEED:-0}" == "1" ]]; then

@@ -101,7 +101,7 @@ function checked_if(bool $cond): string
     return $cond ? ' checked' : '';
 }
 
-function old_or(string $key, mixed $default = ''): string
+function old_or(string $key, $default = ''): string
 {
     $v = old($key);
     return esc($v !== null ? $v : (string) ($default ?? ''));

@@ -17,7 +17,7 @@ class Settings
         return array_merge(Defaults::DEDUPE, self::all($orgId)['dedupe'] ?? []);
     }
 
-    public static function set(int $orgId, string $key, mixed $value): void
+    public static function set(int $orgId, string $key, $value): void
     {
         $settings = self::all($orgId);
         $settings[$key] = $value;
