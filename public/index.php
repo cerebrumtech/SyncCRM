@@ -10,7 +10,7 @@ define('ROOTPATH', dirname(__DIR__) . DIRECTORY_SEPARATOR);
 define('APPPATH', ROOTPATH . 'app' . DIRECTORY_SEPARATOR);
 define('KERNELPATH', ROOTPATH . 'kernel' . DIRECTORY_SEPARATOR);
 define('WRITEPATH', ROOTPATH . 'writable' . DIRECTORY_SEPARATOR);
-define('ASSET_VERSION', '4');
+define('ASSET_VERSION', '5');
 
 if (PHP_VERSION_ID < 70400) {
     http_response_code(500);
