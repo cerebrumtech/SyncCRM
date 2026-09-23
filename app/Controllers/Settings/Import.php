@@ -139,7 +139,10 @@ class Import extends BaseController
             foreach (model(UserModel::class)->where('organization_id', $this->orgId())->where('is_active', 1)->findAll() as $u) {
                 $ownerByEmail[strtolower($u['email'])] = $u['id'];
             }
-            $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'errors' => []];
+            // 'noPhoneKey' counts rows whose phone could not be normalised. They import
+            // fine, but carry no duplicate-detection key, so a later import of the same
+            // person would not be spotted. Worth saying out loud during a migration.
+            $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'noPhoneKey' => 0, 'errors' => []];
             $allTags = [];
             $contacts = model(ContactModel::class);
             $companies = model(CompanyModel::class);
@@ -204,6 +207,9 @@ class Import extends BaseController
                             $existing = $q->groupEnd()->first();
                         }
                         $fields = ['last_name' => $get($row, 'last_name') ?: null, 'email' => $email, 'phone' => $phone, 'phone_normalized' => $pn, 'whatsapp_number' => $wa, 'job_title' => $get($row, 'job_title') ?: null, 'company_id' => $companyId];
+                    if (($phone !== null && $phone !== '' && $pn === null)) {
+                        $summary['noPhoneKey']++;
+                    }
                         if ($existing && $onDuplicate === 'skip') {
                             $summary['skipped']++;
                             continue;

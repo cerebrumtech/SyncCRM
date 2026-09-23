@@ -18,7 +18,13 @@
 <div class="grid gap-5 lg:grid-cols-2">
   <div class="card card-pad"><div class="mb-3 flex items-center justify-between"><h2 class="card-title">Pipeline by stage · <?= esc($pipeline['name'] ?? '') ?></h2><?php if ($pipeline): ?><a class="text-xs link" href="/deals?pipeline=<?= $pipeline['id'] ?>">Open board</a><?php endif ?></div><?= view('partials/bar_list', ['rows' => $stageRows, 'empty' => 'No open deals in this pipeline.']) ?></div>
   <div class="card card-pad"><h2 class="card-title mb-3">Won vs lost revenue · last 6 months</h2>
-    <?php $maxM = max(1, max(array_map(fn ($m) => max($m['won'], $m['lost']), $months))); ?>
+    <?php $maxM = max(1, max(array_map(fn ($m) => max($m['won'], $m['lost']), $months)));
+    // With nothing closed yet every bar is a 2% stub, which reads as a broken chart rather
+    // than an empty one. Say it in words, as the other widgets on this page do.
+    $hasClosed = (bool) array_filter($months, fn ($m) => $m['won'] > 0 || $m['lost'] > 0); ?>
+    <?php if (! $hasClosed): ?>
+      <p class="muted text-[13px]">No deals won or lost in the last 6 months.</p>
+    <?php else: ?>
     <div class="flex h-40 items-end gap-3" data-testid="won-lost">
       <?php foreach ($months as $m): ?>
         <div class="flex flex-1 flex-col items-center gap-1">
@@ -31,6 +37,7 @@
       <?php endforeach ?>
     </div>
     <div class="mt-2 flex gap-4 text-xs muted"><span><span class="mr-1 inline-block h-2 w-2 rounded-sm bg-success"></span>Won</span><span><span class="mr-1 inline-block h-2 w-2 rounded-sm bg-danger/70"></span>Lost</span></div>
+    <?php endif ?>
   </div>
   <div class="card card-pad"><h2 class="card-title mb-3">Sales by rep · <?= $ranges[$range] ?></h2><?= view('partials/bar_list', ['rows' => $byRep, 'color' => '#10B981', 'empty' => 'No deals won in this period.']) ?></div>
   <div class="card card-pad"><h2 class="card-title mb-3">Activity volume · <?= $ranges[$range] ?></h2><?= view('partials/bar_list', ['rows' => $activityRows, 'color' => '#04A2FB']) ?></div>

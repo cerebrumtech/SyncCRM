@@ -5,7 +5,7 @@
 <?php if ($summary): ?>
   <div class="card card-pad mb-5" data-testid="import-summary">
     <h2 class="card-title mb-2">Import finished</h2>
-    <p class="text-[13px]"><b><?= $summary['created'] ?></b> created · <b><?= $summary['updated'] ?></b> updated · <b><?= $summary['skipped'] ?></b> skipped<?= $summary['errors'] ? ' · <b class="text-danger">' . count($summary['errors']) . '</b> errors' : '' ?>. <a class="link" href="<?= $summary['entity'] === 'CONTACT' ? '/contacts' : '/companies' ?>">Open the list</a>.</p>
+    <p class="text-[13px]"><b><?= $summary['created'] ?></b> created · <b><?= $summary['updated'] ?></b> updated · <b><?= $summary['skipped'] ?></b> skipped<?= $summary['errors'] ? ' · <b class="text-danger">' . count($summary['errors']) . '</b> errors' : '' ?><?= ! empty($summary['noPhoneKey']) ? ' · <b class="text-warning-fg">' . $summary['noPhoneKey'] . '</b> with an unreadable phone number (imported, but duplicates of these will not be detected)' : '' ?>. <a class="link" href="<?= $summary['entity'] === 'CONTACT' ? '/contacts' : '/companies' ?>">Open the list</a>.</p>
     <?php if ($summary['errors']): ?><ul class="mt-2 list-disc pl-5 text-xs text-danger"><?php foreach ($summary['errors'] as $e): ?><li><?= esc($e) ?></li><?php endforeach ?></ul><?php endif ?>
   </div>
 <?php endif ?>
