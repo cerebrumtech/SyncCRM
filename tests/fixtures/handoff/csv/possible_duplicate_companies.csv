@@ -1,0 +1,3 @@
+company_a_id,company_a_name,company_a_city,company_a_deals,company_b_id,company_b_name,company_b_city,company_b_deals,name_similarity,same_city,same_branch_count,kept_separate_because
+c1,Nagebaba Multistate,Latur,Won,c2,भवानी अर्बन को-ऑपरेटिव्ह क्रेडिट सोसायटी,Pune,New Lead,0.42,0,0,not enough evidence that they are the same society
+c1,Nagebaba Multistate,Latur,Won,c9,Ghost Society Nobody Exported,,New Lead,0.91,,0,names differ on 'gramin'

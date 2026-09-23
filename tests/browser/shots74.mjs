@@ -1,0 +1,18 @@
+import { launch, login, ok } from "./_lib.mjs";
+const base = "http://127.0.0.1:8101";
+const shots = "tmp/shots";
+const { browser, page } = await launch({ width: 1500 });
+await page.goto(base + "/login");
+await page.fill("#email", "owner@syncworkstech.com");
+await page.fill("#password", "password123");
+await page.click("button[type=submit]");
+await page.waitForURL("**/dashboard");
+await page.screenshot({ path: `${shots}/74-dashboard.png`, fullPage: true });
+await page.goto(base + "/deals");
+await page.screenshot({ path: `${shots}/74-deals.png` });
+await page.goto(base + "/contacts");
+await page.click("[data-testid=contacts-table] tbody tr a");
+await page.waitForURL("**/contacts/*");
+await page.screenshot({ path: `${shots}/74-contact.png` });
+ok("screenshots captured", true);
+await browser.close();

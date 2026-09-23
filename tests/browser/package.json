@@ -1,0 +1,13 @@
+{
+  "name": "synccrm-browser-tests",
+  "private": true,
+  "type": "module",
+  "description": "Browser tests for SyncCRM. The application itself needs no Node.",
+  "scripts": {
+    "test": "bash run.sh",
+    "postinstall": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}

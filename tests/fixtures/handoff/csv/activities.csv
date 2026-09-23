@@ -1,0 +1,3 @@
+id,type,title,description,status,due_at,end_at,location,call_direction,call_outcome,assignee_email,assignee_name,company_id,company_name,contact_id,deal_id,completed_at,logged_at
+a1,CALL,Called chairman,Discussed pricing,COMPLETED,2026-05-10T11:00:00+05:30,,,Outbound,Connected,owner@syncworkstech.com,Hanuman Kale,c1,Nagebaba Multistate,ct1,d1,2026-05-10T11:20:00+05:30,2026-05-10T11:20:00+05:30
+a2,TASK,Send revised quote,,OPEN,2026-09-30T10:00:00+05:30,,,,,monika@syncworkstech.com,Monika,c2,भवानी अर्बन,ct2,,,2026-09-23T10:00:00+05:30
