@@ -17,6 +17,9 @@ dialog.modal {
   background-color: #fff;
   border: 1px solid var(--color-line, #d1d1d1);
   border-radius: 12px;
+  /* The same reset zeroes padding, which left every form flush against the dialog
+     edge. Restated here with the rest, so the whole rule is in one place. */
+  padding: 24px;
   box-shadow: 0 20px 25px -5px rgb(27 36 62 / 0.18), 0 8px 10px -6px rgb(27 36 62 / 0.14);
   /* A long form must scroll inside the dialog rather than run off the screen. */
   max-height: min(90vh, 900px);
@@ -26,6 +29,11 @@ dialog.modal {
 
 dialog.modal::backdrop {
   background-color: rgb(27 36 62 / 0.72);
+}
+
+/* Narrow screens get tighter padding, so the fields keep their width. */
+@media (max-width: 640px) {
+  dialog.modal { padding: 16px; }
 }
 
 /* The page behind a modal must not scroll with it. */
@@ -55,5 +63,26 @@ body:has(dialog.modal[open]) {
   /* Inline links inside prose keep their flow; only stand-alone ones grow. */
   p a.link, td a.link, li a.link {
     min-height: 0;
+  }
+}
+
+/* A tall dialog scrolls inside itself, which used to push Save out of sight and
+   leave people hunting for it. The action row stays put instead. The :has()
+   guard means only a row that really holds the submit button is pinned. */
+dialog.modal form > div:last-child:has(> button[type="submit"]) {
+  position: sticky;
+  bottom: -24px;
+  margin: 8px -24px -24px;
+  padding: 12px 24px;
+  background-color: #fff;
+  border-top: 1px solid var(--color-line, #d1d1d1);
+  border-radius: 0 0 11px 11px;
+}
+
+@media (max-width: 640px) {
+  dialog.modal form > div:last-child:has(> button[type="submit"]) {
+    bottom: -16px;
+    margin: 8px -16px -16px;
+    padding: 12px 16px;
   }
 }
