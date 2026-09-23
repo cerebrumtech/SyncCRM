@@ -1,0 +1,11 @@
+/.env
+/node_modules/
+/vendor/
+/writable/logs/*
+/writable/uploads/*
+/writable/imports/*
+!/writable/logs/index.html
+!/writable/uploads/index.html
+!/writable/imports/index.html
+/nginx-sim.php
+/restart.sh
