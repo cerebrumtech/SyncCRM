@@ -7,6 +7,25 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ---
 
+## 2026-09-24
+
+- **CRM-35** `bug` The dashboard counted won deals across every pipeline, so it reported 14
+  wins where there are 10 paying customers and a 20% win rate where the real figure is 15%.
+  `$openDeals` was scoped to the selected pipeline and the `$agg` closure beside it was not;
+  the Onboarding pipeline's own won stage was being counted alongside Sales. The rupee value
+  was always correct, because onboarding deals carry no amount, which is why it went unseen.
+
+- **CRM-35** `bug` The dashboard opened on "This month" and read as empty. Every deal closed
+  between April and August, so signing in during September showed "Won ₹0 · 0 deals" with all
+  ₹7,15,000 of closed business hidden behind a filter. It now opens on all time.
+
+- **CRM-35** `bug` A double-click on Save created the record twice. The submit button is
+  disabled a tick late, and every record dialog carries `data-keep-enabled`, which skipped that
+  entirely. The form itself is now latched for the life of the page. The duplicate warning and
+  "create anyway" still work, because a warning is a fresh page load and clears the latch.
+
+---
+
 ## 2026-09-23
 
 - **CRM-35** `chore` The sales hand-off is fetched onto the server by a script that checks
