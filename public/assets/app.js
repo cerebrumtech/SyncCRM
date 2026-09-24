@@ -54,10 +54,21 @@
   document.addEventListener("submit", (e) => {
     const f = e.target;
     if (f.matches("[data-confirm]") && !window.confirm(f.getAttribute("data-confirm"))) { e.preventDefault(); return; }
+    // Disabling the button happens a tick late (below), so a fast double-click can fire a
+    // second submit before that runs and create the record twice. Latch the form itself.
+    // This applies even to data-keep-enabled forms: that flag exists so the button stays
+    // usable after a duplicate warning, which is a fresh page load and clears the latch.
+    if (f.dataset.submitting === "1") { e.preventDefault(); return; }
+    f.dataset.submitting = "1";
     const btn = f.querySelector("button[type=submit]:not([data-no-disable])");
     if (btn && !f.hasAttribute("data-keep-enabled")) setTimeout(() => { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = "Please wait…"; }, 0);
   });
-  window.addEventListener("pageshow", () => $$("button[data-label]").forEach((b) => { b.disabled = false; b.textContent = b.dataset.label; }));
+  window.addEventListener("pageshow", () => {
+    $$("button[data-label]").forEach((b) => { b.disabled = false; b.textContent = b.dataset.label; });
+    // Back/forward restores the page with the latch still set; clear it or the form can
+    // never be submitted again.
+    $$("form[data-submitting]").forEach((f) => f.removeAttribute("data-submitting"));
+  });
 
   document.addEventListener("DOMContentLoaded", () => {
     const auto = $("[data-auto-open]");

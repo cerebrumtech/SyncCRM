@@ -31,7 +31,7 @@ class Dashboard extends BaseController
         $p = $this->request->getGet();
         $orgId = $this->orgId();
         $db = db_connect();
-        $range = isset(self::RANGES[$p['range'] ?? '']) ? $p['range'] : 'month';
+        $range = isset(self::RANGES[$p['range'] ?? '']) ? $p['range'] : 'all';
         $owner = ! empty($p['owner']) && ctype_digit((string) $p['owner']) ? (int) $p['owner'] : null;
         $since = $this->since($range);
         $pipelines = DealLib::pipelines($orgId);
@@ -50,8 +50,14 @@ class Dashboard extends BaseController
 
         $deals = fn () => $owner ? $db->table('deals')->where('organization_id', $orgId)->where('owner_id', $owner) : $db->table('deals')->where('organization_id', $orgId);
         $openDeals = $pipeline ? $deals()->select('stage_id, amount')->where('status', 'OPEN')->where('pipeline_id', $pipeline['id'])->get()->getResultArray() : [];
-        $agg = function (string $status) use ($deals, $since) {
+        $agg = function (string $status) use ($deals, $since, $pipeline) {
             $b = $deals()->select('COUNT(*) AS n, COALESCE(SUM(amount),0) AS total')->where('status', $status);
+            // Scope to the selected pipeline, as the open-pipeline figure above is. Without this
+            // the Onboarding pipeline's own won stage is counted alongside the Sales one, so the
+            // tile reports more wins than there are paying customers.
+            if ($pipeline) {
+                $b->where('pipeline_id', $pipeline['id']);
+            }
             if ($since) {
                 $b->where('closed_at >=', $since);
             }
