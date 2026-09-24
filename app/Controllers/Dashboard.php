@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\Activities as Act;
 use App\Libraries\Deals as DealLib;
 use App\Libraries\Lists;
+use App\Libraries\Visibility;
 
 class Dashboard extends BaseController
 {
@@ -48,7 +49,16 @@ class Dashboard extends BaseController
         $today = date('Y-m-d 00:00:00');
         $tomorrow = date('Y-m-d 00:00:00', strtotime('+1 day'));
 
-        $deals = fn () => $owner ? $db->table('deals')->where('organization_id', $orgId)->where('owner_id', $owner) : $db->table('deals')->where('organization_id', $orgId);
+        // Every figure on this page is scoped to what the viewer may read, so a restricted
+        // user sees their own pipeline rather than the organisation's.
+        $deals = function () use ($db, $orgId, $owner) {
+            $b = $db->table('deals')->where('organization_id', $orgId);
+            if ($owner) {
+                $b->where('owner_id', $owner);
+            }
+            Visibility::apply($b, $this->me, 'deals', 'DEAL');
+            return $b;
+        };
         $openDeals = $pipeline ? $deals()->select('stage_id, amount')->where('status', 'OPEN')->where('pipeline_id', $pipeline['id'])->get()->getResultArray() : [];
         $agg = function (string $status) use ($deals, $since, $pipeline) {
             $b = $deals()->select('COUNT(*) AS n, COALESCE(SUM(amount),0) AS total')->where('status', $status);
@@ -112,7 +122,14 @@ class Dashboard extends BaseController
             }
         }
 
-        $actQ = fn () => $owner ? $db->table('activities')->where('organization_id', $orgId)->where('assignee_id', $owner) : $db->table('activities')->where('organization_id', $orgId);
+        $actQ = function () use ($db, $orgId, $owner) {
+            $b = $db->table('activities')->where('organization_id', $orgId);
+            if ($owner) {
+                $b->where('assignee_id', $owner);
+            }
+            Visibility::apply($b, $this->me, 'activities', null, 'assignee_id');
+            return $b;
+        };
         $typeCounts = ['TASK' => 0, 'CALL' => 0, 'EVENT' => 0];
         $q = $actQ()->select('type, COUNT(*) AS n');
         if ($since) {

@@ -72,6 +72,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $r) {
         $s->get('users', 'Users::index');
         $s->post('users/invite', 'Users::invite');
         $s->post('users/(:num)/role', 'Users::role/$1');
+        $s->post('users/(:num)/visibility', 'Users::visibility/$1');
         $s->post('users/(:num)/deactivate', 'Users::deactivate/$1');
         $s->post('users/(:num)/reactivate', 'Users::reactivate/$1');
         $s->post('users/invites/(:num)/revoke', 'Users::revoke/$1');

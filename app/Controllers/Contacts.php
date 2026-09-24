@@ -9,6 +9,7 @@ use App\Libraries\Permissions;
 use App\Libraries\Records;
 use App\Libraries\Settings;
 use App\Libraries\Tags;
+use App\Libraries\Visibility;
 use App\Models\ActivityModel;
 use App\Models\AttachmentModel;
 use App\Models\CompanyModel;
@@ -47,6 +48,12 @@ class Contacts extends BaseController
     {
         $contact = model(ContactModel::class)->findInOrg($this->orgId(), $id);
         if (! $contact) {
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
+        }
+        // Filtering the list is not enough on its own: without this the record is still
+        // reachable by typing its URL. 404 rather than 403, so the reply does not confirm
+        // that a record this user may not read exists.
+        if (! Visibility::canView($this->me, $contact, 'CONTACT')) {
             throw \Sync\Exceptions\PageNotFound::forPageNotFound();
         }
         $company = $contact['company_id'] ? model(CompanyModel::class)->find($contact['company_id']) : null;

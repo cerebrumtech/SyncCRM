@@ -382,6 +382,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `role` varchar(16) NOT NULL DEFAULT 'MEMBER',
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `color` varchar(16) NOT NULL DEFAULT '#0068FF',
+  `visibility` varchar(10) NOT NULL DEFAULT 'all',
   `last_login_at` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,

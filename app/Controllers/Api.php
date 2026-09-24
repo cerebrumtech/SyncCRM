@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Libraries\Visibility;
+
 /** JSON search endpoints for record pickers. */
 class Api extends BaseController
 {
@@ -14,17 +16,22 @@ class Api extends BaseController
         if ($q !== '') {
             switch ($kind) {
                 case 'contacts':
-                    $r = $db->table('contacts c')->select('c.id, c.first_name, c.last_name, c.email, co.name AS company_name')->join('companies co', 'co.id = c.company_id', 'left')
-                        ->where('c.organization_id', $orgId)->groupStart()->like('c.first_name', $q)->orLike('c.last_name', $q)->orLike('c.email', $q)->orLike('c.phone', $q)->groupEnd()
-                        ->orderBy('c.updated_at', 'DESC')->limit(8)->get()->getResultArray();
+                    $b = $db->table('contacts c')->select('c.id, c.first_name, c.last_name, c.email, co.name AS company_name')->join('companies co', 'co.id = c.company_id', 'left')
+                        ->where('c.organization_id', $orgId)->groupStart()->like('c.first_name', $q)->orLike('c.last_name', $q)->orLike('c.email', $q)->orLike('c.phone', $q)->groupEnd();
+                    Visibility::apply($b, $this->me, 'c', 'CONTACT');
+                    $r = $b->orderBy('c.updated_at', 'DESC')->limit(8)->get()->getResultArray();
                     $rows = array_map(fn ($x) => ['id' => $x['id'], 'label' => full_name($x), 'sub' => $x['email'] ?? $x['company_name'] ?? '', 'company_id' => null], $r);
                     break;
                 case 'companies':
-                    $r = $db->table('companies')->select('id, name, city')->where('organization_id', $orgId)->like('name', $q)->orderBy('updated_at', 'DESC')->limit(8)->get()->getResultArray();
+                    $b = $db->table('companies')->select('id, name, city')->where('organization_id', $orgId)->like('name', $q);
+                    Visibility::apply($b, $this->me, 'companies', 'COMPANY');
+                    $r = $b->orderBy('updated_at', 'DESC')->limit(8)->get()->getResultArray();
                     $rows = array_map(fn ($x) => ['id' => $x['id'], 'label' => $x['name'], 'sub' => $x['city'] ?? ''], $r);
                     break;
                 case 'deals':
-                    $r = $db->table('deals d')->select('d.id, d.title, p.name AS pipeline_name')->join('pipelines p', 'p.id = d.pipeline_id')->where('d.organization_id', $orgId)->like('d.title', $q)->orderBy('d.updated_at', 'DESC')->limit(8)->get()->getResultArray();
+                    $b = $db->table('deals d')->select('d.id, d.title, p.name AS pipeline_name')->join('pipelines p', 'p.id = d.pipeline_id')->where('d.organization_id', $orgId)->like('d.title', $q);
+                    Visibility::apply($b, $this->me, 'd', 'DEAL');
+                    $r = $b->orderBy('d.updated_at', 'DESC')->limit(8)->get()->getResultArray();
                     $rows = array_map(fn ($x) => ['id' => $x['id'], 'label' => $x['title'], 'sub' => $x['pipeline_name']], $r);
                     break;
                 case 'products':
