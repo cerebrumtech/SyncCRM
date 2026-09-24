@@ -9,6 +9,17 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-24
 
+- **CRM-36** `feature` `risk-schema` A user can now be limited to the records they own.
+  Until now everyone signed in could read every record; `Permissions` governed editing and
+  deleting, and nothing governed seeing. Adds `users.visibility` (`all` or `own`) and
+  `App\Libraries\Visibility`, applied to the list queries, the CSV export, the activity
+  queries, the dashboard figures, the JSON typeahead, and every record's own page — that last
+  one matters, because filtering a list still leaves the record reachable by typing its URL.
+  It answers 404 there rather than 403, so the reply does not confirm the record exists.
+  The organisation's owner is always able to see everything and cannot be restricted. Records
+  with no owner stay visible to all. Every existing user defaults to `all`, so nothing changes
+  until someone is set otherwise on Settings → Users.
+
 - **CRM-35** `bug` The dashboard counted won deals across every pipeline, so it reported 14
   wins where there are 10 paying customers and a 20% win rate where the real figure is 15%.
   `$openDeals` was scoped to the selected pipeline and the `$agg` closure beside it was not;
