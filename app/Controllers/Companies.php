@@ -9,6 +9,7 @@ use App\Libraries\Permissions;
 use App\Libraries\Records;
 use App\Libraries\Settings;
 use App\Libraries\Tags;
+use App\Libraries\Visibility;
 use App\Models\ActivityModel;
 use App\Models\AttachmentModel;
 use App\Models\CompanyModel;
@@ -43,6 +44,12 @@ class Companies extends BaseController
     {
         $company = model(CompanyModel::class)->findInOrg($this->orgId(), $id);
         if (! $company) {
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
+        }
+        // Filtering the list is not enough on its own: without this the record is still
+        // reachable by typing its URL. 404 rather than 403, so the reply does not confirm
+        // that a record this user may not read exists.
+        if (! Visibility::canView($this->me, $company, 'COMPANY')) {
             throw \Sync\Exceptions\PageNotFound::forPageNotFound();
         }
         $owner = $company['owner_id'] ? model(UserModel::class)->find($company['owner_id']) : null;

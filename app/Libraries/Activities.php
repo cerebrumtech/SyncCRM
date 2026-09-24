@@ -11,13 +11,17 @@ class Activities
     /** Rows with assignee and linked-record names. */
     public static function query(int $orgId)
     {
-        return db_connect()->table('activities a')
+        $b = db_connect()->table('activities a')
             ->select('a.*, u.name AS assignee_name, u.color AS assignee_color, CONCAT_WS(" ", c.first_name, c.last_name) AS contact_name, co.name AS company_name, d.title AS deal_title')
             ->join('users u', 'u.id = a.assignee_id', 'left')
             ->join('contacts c', 'c.id = a.contact_id', 'left')
             ->join('companies co', 'co.id = a.company_id', 'left')
             ->join('deals d', 'd.id = a.deal_id', 'left')
             ->where('a.organization_id', $orgId);
+        // An activity belongs to whoever it is assigned to. Activities are not shareable,
+        // so there is no record_shares entity to consult.
+        Visibility::apply($b, Auth::user() ?? ['id' => 0, 'organization_id' => 0, 'role' => 'OWNER'], 'a', null, 'assignee_id');
+        return $b;
     }
 
     public static function canTouch(array $user, array $a): bool

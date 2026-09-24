@@ -11,6 +11,15 @@ class Lists
 {
     public const PATHS = ['CONTACT' => '/contacts', 'COMPANY' => '/companies', 'DEAL' => '/deals'];
 
+    /**
+     * The signed-in user, for read scoping. Null on the command line - the importer and
+     * the installer run as nobody and must see the whole organisation.
+     */
+    private static function viewer(): array
+    {
+        return Auth::user() ?? ['id' => 0, 'organization_id' => 0, 'role' => 'OWNER', 'visibility' => Visibility::ALL];
+    }
+
     public static function activeUsers(int $orgId): array
     {
         return model(UserModel::class)->select('id, name, color, email')->where('organization_id', $orgId)->where('is_active', 1)->orderBy('name')->findAll();
@@ -49,6 +58,7 @@ class Lists
             ->join('companies co', 'co.id = c.company_id', 'left')
             ->join('users u', 'u.id = c.owner_id', 'left')
             ->where('c.organization_id', $orgId);
+        Visibility::apply($b, self::viewer(), 'c', 'CONTACT');
         if (! empty($p['owner'])) {
             $b->where('c.owner_id', (int) $p['owner']);
         }
@@ -75,6 +85,7 @@ class Lists
             ->select('co.*, u.name AS owner_name, u.color AS owner_color, (SELECT COUNT(*) FROM contacts c WHERE c.company_id = co.id) AS contact_count, (SELECT COUNT(*) FROM deals d WHERE d.company_id = co.id AND d.status = "OPEN") AS open_deal_count')
             ->join('users u', 'u.id = co.owner_id', 'left')
             ->where('co.organization_id', $orgId);
+        Visibility::apply($b, self::viewer(), 'co', 'COMPANY');
         if (! empty($p['owner'])) {
             $b->where('co.owner_id', (int) $p['owner']);
         }
@@ -105,6 +116,7 @@ class Lists
             ->join('companies co', 'co.id = d.company_id', 'left')
             ->join('users u', 'u.id = d.owner_id', 'left')
             ->where('d.organization_id', $orgId);
+        Visibility::apply($b, self::viewer(), 'd', 'DEAL');
         if (! empty($p['pipeline'])) {
             $b->where('d.pipeline_id', (int) $p['pipeline']);
         }

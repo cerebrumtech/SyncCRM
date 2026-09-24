@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\Auth;
 use App\Libraries\Audit;
 use App\Libraries\Permissions;
+use App\Libraries\Visibility;
 use App\Models\ActivityModel;
 use App\Models\CompanyModel;
 use App\Models\ContactModel;
@@ -83,6 +84,26 @@ class Users extends BaseController
             model(UserModel::class)->update($id, ['role' => $role]);
             Audit::log($this->me, 'update_role', 'User', $id, $target['email'], ['role' => $target['role']], ['role' => $role]);
             return $this->ok('Role updated.', '/settings/users');
+        });
+    }
+
+    public function visibility(int $id)
+    {
+        return $this->attempt(function () use ($id) {
+            $value = $this->str('visibility');
+            if (! in_array($value, [Visibility::ALL, Visibility::OWN], true)) {
+                $this->fail('Choose what this user can see.');
+            }
+            $target = model(UserModel::class)->findInOrg($this->orgId(), $id) ?? $this->fail('User not found.');
+            Permissions::assert(Permissions::isAdmin($this->me), 'Only an admin can change what a user sees.');
+            // The organisation's owner must always be able to see everything; there is no way
+            // back from locking that person out of their own data.
+            if ($target['role'] === 'OWNER' && $value !== Visibility::ALL) {
+                $this->fail('The owner always sees every record.');
+            }
+            model(UserModel::class)->update($id, ['visibility' => $value]);
+            Audit::log($this->me, 'update_visibility', 'User', $id, $target['email'], ['visibility' => $target['visibility'] ?? Visibility::ALL], ['visibility' => $value]);
+            return $this->ok('Visibility updated.', '/settings/users');
         });
     }
 

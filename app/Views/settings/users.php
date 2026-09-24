@@ -5,7 +5,7 @@
 <?php $isOwner = $me['role'] === 'OWNER'; $active = array_values(array_filter($users, fn ($u) => $u['is_active'])); ?>
 <div class="card overflow-x-auto">
 <table class="table">
-  <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Last sign-in</th><th class="text-right">Actions</th></tr></thead>
+  <thead><tr><th>User</th><th>Role</th><th>Sees</th><th>Status</th><th>Last sign-in</th><th class="text-right">Actions</th></tr></thead>
   <tbody>
   <?php foreach ($users as $u): $self = $u['id'] === $me['id']; ?>
     <tr data-testid="user-row" data-email="<?= esc($u['email'], 'attr') ?>">
@@ -18,6 +18,16 @@
           </select>
         </form>
         <?php else: ?><?= badge(role_label($u['role']), $u['role'] === 'OWNER' ? 'info' : 'neutral') ?><?php endif ?>
+      </td>
+      <td>
+        <?php if ($u['is_active'] && $u['role'] !== 'OWNER'): ?>
+        <form method="post" action="/settings/users/<?= $u['id'] ?>/visibility" class="inline"><?= csrf_field() ?>
+          <select name="visibility" class="select w-40" data-submit-on-change aria-label="What <?= esc($u['name'], 'attr') ?> can see">
+            <option value="all"<?= selected_if(($u['visibility'] ?? 'all') !== 'own') ?>>All records</option>
+            <option value="own"<?= selected_if(($u['visibility'] ?? 'all') === 'own') ?>>Only their own</option>
+          </select>
+        </form>
+        <?php else: ?><?= badge('All records', 'info') ?><?php endif ?>
       </td>
       <td><?= $u['is_active'] ? badge('Active', 'success') : badge('Deactivated', 'neutral') ?></td>
       <td class="muted"><?= $u['last_login_at'] ? relative_time($u['last_login_at']) : 'Never' ?></td>

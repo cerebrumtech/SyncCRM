@@ -10,6 +10,7 @@ use App\Libraries\Lists;
 use App\Libraries\Permissions;
 use App\Libraries\Records;
 use App\Libraries\Tags;
+use App\Libraries\Visibility;
 use App\Models\CompanyModel;
 use App\Models\ContactModel;
 use App\Models\DealLineItemModel;
@@ -102,6 +103,12 @@ class Deals extends BaseController
     {
         $deal = model(DealModel::class)->findInOrg($this->orgId(), $id);
         if (! $deal) {
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
+        }
+        // Filtering the list is not enough on its own: without this the record is still
+        // reachable by typing its URL. 404 rather than 403, so the reply does not confirm
+        // that a record this user may not read exists.
+        if (! Visibility::canView($this->me, $deal, 'DEAL')) {
             throw \Sync\Exceptions\PageNotFound::forPageNotFound();
         }
         $pipelines = DealLib::pipelines($this->orgId());

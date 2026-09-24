@@ -44,6 +44,11 @@ class Schema
     private static function addMissingColumns($db): int
     {
         $wanted = [
+            'users' => [
+                // Who this user may READ. 'all' (the organisation) or 'own' (their own
+                // records, plus anything shared with them). See App\Libraries\Visibility.
+                'visibility' => "varchar(10) NOT NULL DEFAULT 'all' AFTER `color`",
+            ],
             'companies' => [
                 'alt_phone'      => "varchar(30) DEFAULT NULL AFTER `phone`",
                 'district'       => "varchar(80) DEFAULT NULL AFTER `postal_code`",
