@@ -143,7 +143,46 @@
     const list = document.createElement("div"); list.className = "picker-list"; list.hidden = true;
     root.classList.add("relative"); root.append(hidden, input, list);
     let timer = null;
-    input.addEventListener("input", () => { hidden.value = ""; clearTimeout(timer); const q = input.value.trim(); if (!q) { list.hidden = true; return; } timer = setTimeout(async () => { const r = await getJSON(url + "?q=" + encodeURIComponent(q)); list.innerHTML = ""; (r.data || []).forEach((row) => { const b = document.createElement("button"); b.type = "button"; b.innerHTML = "<span class='font-medium'>" + esc(row.label) + "</span>" + (row.sub ? " <span class='muted'>" + esc(row.sub) + "</span>" : ""); b.addEventListener("click", () => { hidden.value = row.id; input.value = row.label; list.hidden = true; root.dispatchEvent(new CustomEvent("picked", { detail: row, bubbles: true })); }); list.appendChild(b); }); if (!(r.data || []).length) { const p = document.createElement("div"); p.className = "px-3 py-2 text-[13px] muted"; p.textContent = "No matches"; list.appendChild(p); } list.hidden = false; }, 180); });
+    const choose = (row) => {
+      hidden.value = row.id; input.value = row.label; list.hidden = true;
+      root.dispatchEvent(new CustomEvent("picked", { detail: row, bubbles: true }));
+    };
+    // What this picker can create when nothing matches, e.g. data-create="/api/quick-create/companies".
+    const createUrl = root.getAttribute("data-create");
+    const createLabel = root.getAttribute("data-create-label") || "Create";
+    const render = (rows, q) => {
+      list.innerHTML = "";
+      rows.forEach((row) => {
+        const b = document.createElement("button"); b.type = "button";
+        b.innerHTML = "<span class='font-medium'>" + esc(row.label) + "</span>" + (row.sub ? " <span class='muted'>" + esc(row.sub) + "</span>" : "");
+        b.addEventListener("click", () => choose(row));
+        list.appendChild(b);
+      });
+      if (!rows.length && !createUrl) {
+        const p = document.createElement("div"); p.className = "px-3 py-2 text-[13px] muted"; p.textContent = "No matches"; list.appendChild(p);
+      }
+      if (createUrl && q) {
+        const c = document.createElement("button"); c.type = "button"; c.setAttribute("data-picker-create", "");
+        c.innerHTML = "<span class='font-medium'>+ " + esc(createLabel) + " “" + esc(q) + "”</span>";
+        c.addEventListener("click", async () => {
+          c.disabled = true; c.textContent = "Creating…";
+          const r = await postJSON(createUrl, { name: q });
+          if (r && r.ok && r.data) { choose(r.data); }
+          else { c.disabled = false; c.textContent = (r && r.error) || "Could not create that."; }
+        });
+        list.appendChild(c);
+      }
+      list.hidden = false;
+    };
+    input.addEventListener("input", () => {
+      hidden.value = ""; clearTimeout(timer);
+      const q = input.value.trim();
+      if (!q) { list.hidden = true; return; }
+      timer = setTimeout(async () => {
+        const r = await getJSON(url + "?q=" + encodeURIComponent(q));
+        render(r.data || [], q);
+      }, 180);
+    });
     input.addEventListener("blur", () => setTimeout(() => (list.hidden = true), 150));
     input.addEventListener("focus", () => { if (list.children.length && input.value.trim()) list.hidden = false; });
     root.clear = () => { hidden.value = ""; input.value = ""; };
