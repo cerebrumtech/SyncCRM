@@ -9,6 +9,11 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-25
 
+- **CRM-41** `improvement` A contact or company missing from a deal's picker can now be created
+  from the picker itself — "+ Add contact…" with whatever you have typed — instead of abandoning
+  the deal to go and make it. Only a name is taken; the rest belongs on the record's own page.
+  A name that already exists is selected rather than created twice.
+
 - **CRM-39** `improvement` Filter bars apply themselves. A dropdown takes effect the moment it
   changes and a search box half a second after you stop typing, so the Apply button is gone.
   It is only hidden, not removed, so the bars still work without JavaScript.

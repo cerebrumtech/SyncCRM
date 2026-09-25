@@ -2,7 +2,10 @@
 
 namespace App\Controllers;
 
+use App\Libraries\Audit;
 use App\Libraries\Visibility;
+use App\Models\CompanyModel;
+use App\Models\ContactModel;
 
 /** JSON search endpoints for record pickers. */
 class Api extends BaseController
@@ -43,5 +46,59 @@ class Api extends BaseController
             }
         }
         return $this->response->setJSON(['ok' => true, 'data' => $rows]);
+    }
+
+    /**
+     * Creates the bare minimum record from a name typed into a picker, so a deal does not
+     * have to be abandoned because the company is not in the system yet.
+     *
+     * Only a name is taken. Everything else is filled in later on the record's own page,
+     * where the real form and its validation live. An exact name that already exists is
+     * returned rather than duplicated - the picker is the one place a careless second
+     * Acme Ltd is easiest to create.
+     */
+    public function quickCreate(string $kind)
+    {
+        $body = $this->jsonBody();
+        $name = trim((string) ($body['name'] ?? ''));
+        if ($name === '') {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => 'Give it a name first.']);
+        }
+        $name = mb_substr($name, 0, 160);
+        $orgId = $this->orgId();
+        $db = db_connect();
+
+        if ($kind === 'companies') {
+            $found = $db->table('companies')->select('id, name, city')->where('organization_id', $orgId)->where('name', $name)->get()->getRowArray();
+            if ($found) {
+                return $this->response->setJSON(['ok' => true, 'existed' => true, 'data' => ['id' => (int) $found['id'], 'label' => $found['name'], 'sub' => $found['city'] ?? '']]);
+            }
+            $id = model(CompanyModel::class)->insert([
+                'organization_id' => $orgId, 'name' => $name, 'country' => 'India',
+                'tags' => [], 'custom_fields' => [], 'owner_id' => $this->me['id'],
+            ]);
+            Audit::log($this->me, 'create', 'COMPANY', $id, $name, null, ['name' => $name, 'via' => 'picker']);
+            return $this->response->setJSON(['ok' => true, 'data' => ['id' => (int) $id, 'label' => $name, 'sub' => 'New company']]);
+        }
+
+        if ($kind === 'contacts') {
+            // "Sunita Kale" -> first "Sunita", last "Kale". One word is a first name.
+            $parts = preg_split('/\s+/', $name, 2);
+            $first = mb_substr($parts[0], 0, 80);
+            $last = isset($parts[1]) ? mb_substr($parts[1], 0, 80) : null;
+            $found = $db->table('contacts')->select('id, first_name, last_name, email')->where('organization_id', $orgId)
+                ->where('first_name', $first)->where('last_name', $last)->get()->getRowArray();
+            if ($found) {
+                return $this->response->setJSON(['ok' => true, 'existed' => true, 'data' => ['id' => (int) $found['id'], 'label' => trim($found['first_name'] . ' ' . (string) $found['last_name']), 'sub' => $found['email'] ?? '']]);
+            }
+            $id = model(ContactModel::class)->insert([
+                'organization_id' => $orgId, 'first_name' => $first, 'last_name' => $last,
+                'tags' => [], 'custom_fields' => [], 'owner_id' => $this->me['id'],
+            ]);
+            Audit::log($this->me, 'create', 'CONTACT', $id, $name, null, ['name' => $name, 'via' => 'picker']);
+            return $this->response->setJSON(['ok' => true, 'data' => ['id' => (int) $id, 'label' => $name, 'sub' => 'New contact']]);
+        }
+
+        return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'error' => 'Cannot create that here.']);
     }
 }
