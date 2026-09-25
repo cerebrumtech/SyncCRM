@@ -46,7 +46,19 @@ class Import extends BaseController
      */
     public function sample(string $entity)
     {
-        $entity = strtoupper($entity) === 'COMPANY' ? 'COMPANY' : 'CONTACT';
+        // The entity comes from the URL here, not from a select box, so an unrecognised
+        // one has to be refused rather than quietly defaulting. Handing somebody the
+        // contacts template when they asked for companies wastes an afternoon: the
+        // columns look plausible, the import maps them all to Skip, and nothing explains
+        // why. Plurals are accepted because they are the obvious thing to type.
+        $known = [
+            'CONTACT' => 'CONTACT', 'CONTACTS' => 'CONTACT',
+            'COMPANY' => 'COMPANY', 'COMPANIES' => 'COMPANY',
+        ];
+        $entity = $known[strtoupper($entity)] ?? null;
+        if ($entity === null) {
+            throw \Sync\Exceptions\PageNotFound::forPageNotFound();
+        }
         $targets = $this->targets($entity);
         $example = $entity === 'CONTACT'
             ? ['first_name' => 'Sunita', 'last_name' => 'Kale', 'email' => 'sunita@example.com',
