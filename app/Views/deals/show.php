@@ -69,7 +69,7 @@
     <?php endif ?>
   </div>
   <?php $itemsHtml = ob_get_clean(); ?>
-  <?= view('partials/record_panels', ['entity' => 'DEAL', 'record' => $deal, 'extraTabs' => ['items' => ['Line items', count($items), $itemsHtml]]]) ?>
+  <?= view('partials/record_panels', ['entity' => 'DEAL', 'record' => $deal, 'extraTabs' => ['items' => ['Products', count($items), $itemsHtml]]]) ?>
 </div>
 <?php if ($canEdit): ?>
 <dialog id="deal-dialog" class="modal modal-lg"><form method="post" action="/deals/<?= $deal['id'] ?>" data-keep-enabled><?= csrf_field() ?>

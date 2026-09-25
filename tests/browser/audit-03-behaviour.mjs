@@ -47,6 +47,7 @@ if (hasDealDialog) {
   if (await amt.count()) {
     await amt.fill("-50000");
     await fillRequired("#deal-dialog");
+    await page.locator('#deal-dialog input[name="products[]"]').first().check().catch(() => {});  // a deal needs a product
     await page.click("#deal-dialog button[type=submit]");
     await page.waitForTimeout(2000);
     await page.goto(base + "/deals?q=NegAmt" + T);

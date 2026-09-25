@@ -28,6 +28,7 @@ const amtField = page.locator("#deal-dialog input[name=amount]");
 if (await amtField.count()) {
   await amtField.fill("-50000");
   await fillRequired("#deal-dialog");
+  await page.locator('#deal-dialog input[name="products[]"]').first().check().catch(() => {});  // a deal needs a product
   await page.click("#deal-dialog button[type=submit]");
   await page.waitForTimeout(1500);
   const onDeal = page.url().includes("/deals/");
@@ -82,6 +83,7 @@ const stageSel = page.locator("#deal-dialog select[name=stage_id]");
 if (await stageSel.count()) {
   await fillRequired("#deal-dialog");
   await page.locator("#deal-dialog input[name=amount]").fill("").catch(() => {});
+  await page.locator('#deal-dialog input[name="products[]"]').first().check().catch(() => {});  // a deal needs a product
   await page.click("#deal-dialog button[type=submit]");
   await page.waitForTimeout(1500);
   const txt = await page.locator("body").innerText();
