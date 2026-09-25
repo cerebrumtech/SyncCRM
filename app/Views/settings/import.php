@@ -12,7 +12,12 @@
 <?php if (! $pending): ?>
 <div class="card card-pad max-w-2xl">
   <h2 class="card-title mb-1">Step 1 · Upload a CSV</h2>
-  <p class="mb-3 text-[13px] muted">The first row must contain column headings. You will map the columns in the next step. Up to 5,000 rows per file.</p>
+  <p class="mb-2 text-[13px] muted">The first row must contain column headings. You will map the columns in the next step. Up to 5,000 rows per file.</p>
+  <p class="mb-3 text-[13px] muted">Not sure of the format? Start from a template — it carries every heading this importer understands, with one example row. Open it in Excel, replace the example with your own rows, save as CSV and upload it.<br>
+    <a class="font-medium text-brand underline" href="/settings/import/sample/CONTACT" data-testid="sample-contact"><?= icon('download', 'inline h-3.5 w-3.5') ?> Contacts template</a>
+    &nbsp;·&nbsp;
+    <a class="font-medium text-brand underline" href="/settings/import/sample/COMPANY" data-testid="sample-company"><?= icon('download', 'inline h-3.5 w-3.5') ?> Companies template</a>
+  </p>
   <form method="post" action="/settings/import/upload" enctype="multipart/form-data"><?= csrf_field() ?>
     <div class="grid gap-3 sm:grid-cols-2">
       <div class="field"><label class="label" for="imp-entity">Import</label><select class="select" id="imp-entity" name="entity"><option value="CONTACT">Contacts</option><option value="COMPANY">Companies</option></select></div>
