@@ -76,6 +76,7 @@
     if (location.hash) { const tab = $('[data-tab="' + location.hash.slice(1) + '"]'); if (tab) tab.click(); }
     $$("[data-picker]").forEach(initPicker);
     $$("[data-sheet]").forEach(initSheet);
+    $$("[data-sheet-kind]").forEach(initSheetEditing);
     $$("[data-kanban]").forEach(initKanban);
     $$("[data-line-items]").forEach(initLineItems);
     $$("[data-stage-select]").forEach(initStageSelect);
@@ -304,5 +305,178 @@
     $("[data-add-row]", root).addEventListener("click", () => addRow());
     JSON.parse(root.getAttribute("data-items") || "[]").forEach(addRow);
     recalc();
+  }
+
+  // Editing a cell of the sheet, one cell at a time.
+  //
+  // What may be written and what a value is allowed to be is decided on the server by
+  // App\Libraries\SheetEdit. Everything here is convenience: the cell reverts on any
+  // refusal, so a browser that is wrong about a field simply cannot write it.
+  function initSheetEditing(sheet) {
+    const kind = sheet.getAttribute("data-sheet-kind");
+    const options = JSON.parse(sheet.getAttribute("data-sheet-options") || "{}");
+    const status = document.querySelector("[data-sheet-status]");
+    let open = null; // the cell currently being edited
+
+    function say(text, bad) {
+      if (!status) return;
+      status.textContent = text;
+      status.hidden = !text;
+      status.className = "text-xs " + (bad ? "font-medium text-danger" : "muted");
+      if (!bad && text) setTimeout(() => { if (status.textContent === text) status.hidden = true; }, 2000);
+    }
+
+    function close(cell, html) {
+      // Order matters. Replacing the cell's contents removes the focused input, which
+      // fires blur synchronously; if `open` still pointed at this cell that blur would
+      // call commit() again and save a value the person had just cancelled. Clearing it
+      // first, and blurring explicitly, keeps the two paths from crossing.
+      open = null;
+      const live = cell.querySelector("input, select");
+      if (live) { live.blur(); }
+      cell.innerHTML = html;
+      cell.style.padding = "";
+    }
+
+    async function save(cell, value, previousHtml) {
+      const field = cell.getAttribute("data-edit");
+      if (value === cell.getAttribute("data-value")) { close(cell, previousHtml); return; }
+
+      close(cell, previousHtml);
+      cell.style.opacity = "0.5";
+
+      try {
+        const data = await postJSON("/api/sheet/" + kind, {
+          id: cell.closest("tr").getAttribute("data-id"), field: field, value: value,
+        });
+        cell.style.opacity = "";
+
+        if (!data || !data.ok) {
+          // The old value goes back, so nobody is left believing a change was saved.
+          say(data.error || "That could not be saved.", true);
+          cell.style.background = "#fee2e2";
+          setTimeout(() => { cell.style.background = ""; }, 2000);
+          return;
+        }
+
+        cell.innerHTML = data.display;
+        cell.setAttribute("data-value", data.value);
+        cell.style.background = "#dcfce7";
+        setTimeout(() => { cell.style.background = ""; }, 700);
+        say("Saved", false);
+      } catch (err) {
+        cell.style.opacity = "";
+        say("No connection, so nothing was saved.", true);
+      }
+    }
+
+    function edit(cell) {
+      if (open === cell) return;
+
+      const previousHtml = cell.innerHTML;
+      const type = cell.getAttribute("data-type");
+      const current = cell.getAttribute("data-value") || "";
+      open = cell;
+      cell.style.padding = "2px";
+
+      let input;
+      if (type === "select") {
+        input = document.createElement("select");
+        input.className = "select";
+        (options[cell.getAttribute("data-options")] || []).forEach((o) => {
+          const el = document.createElement("option");
+          el.value = o.value; el.textContent = o.label;
+          if (o.value === current) el.selected = true;
+          input.appendChild(el);
+        });
+      } else if (type === "lookup") {
+        input = document.createElement("input");
+        input.className = "input";
+        input.setAttribute("list", "sheet-lookup-list");
+        input.placeholder = "Type to search…";
+        input.value = cell.textContent.trim() === "—" ? "" : cell.textContent.trim();
+      } else {
+        input = document.createElement("input");
+        input.className = "input";
+        input.type = type === "date" ? "date" : (type === "money" || type === "int" ? "number" : "text");
+        if (type === "money") input.step = "0.01";
+        if (type === "email") input.type = "email";
+        input.value = current;
+      }
+
+      input.style.width = "100%";
+      input.style.minWidth = "9rem";
+      cell.innerHTML = "";
+      cell.appendChild(input);
+      input.focus();
+      if (input.select) input.select();
+
+      let chosenId = current;
+
+      if (type === "lookup") {
+        // Reuses the same search endpoint the record pickers use, so a company typed
+        // here resolves to the same record a picker would have found.
+        const list = document.createElement("datalist");
+        list.id = "sheet-lookup-list";
+        document.body.appendChild(list);
+        let timer;
+        input.addEventListener("input", () => {
+          chosenId = "";
+          clearTimeout(timer);
+          timer = setTimeout(async () => {
+            const q = input.value.trim();
+            if (q.length < 2) return;
+            try {
+              const d = await getJSON(cell.getAttribute("data-search") + "?q=" + encodeURIComponent(q));
+              list.innerHTML = "";
+              (d.data || d.results || []).forEach((row) => {
+                const o = document.createElement("option");
+                o.value = row.label; o.setAttribute("data-id", row.id);
+                list.appendChild(o);
+              });
+            } catch (e) {}
+          }, 200);
+        });
+        input.addEventListener("change", () => {
+          const match = Array.from(list.options).find((o) => o.value === input.value);
+          chosenId = match ? match.getAttribute("data-id") : "";
+        });
+      }
+
+      function commit() {
+        const value = type === "lookup" ? (input.value.trim() === "" ? "" : chosenId) : input.value;
+        if (type === "lookup" && input.value.trim() !== "" && !chosenId) {
+          say("Pick one of the suggestions so the right record is linked.", true);
+          close(cell, previousHtml);
+          return;
+        }
+        save(cell, value, previousHtml);
+      }
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        else if (e.key === "Escape") { e.preventDefault(); close(cell, previousHtml); }
+        else if (e.key === "Tab") {
+          e.preventDefault();
+          commit();
+          const cells = $$("td[data-edit]", sheet);
+          const next = cells[cells.indexOf(cell) + (e.shiftKey ? -1 : 1)];
+          if (next) setTimeout(() => edit(next), 60);
+        }
+      });
+      // Clicking away commits, the same as pressing Enter. close() clears `open`, so a
+      // blur that follows a commit cannot fire a second save for the same cell.
+      input.addEventListener("blur", () => { if (open === cell) commit(); });
+
+      if (type === "select") input.addEventListener("change", commit);
+    }
+
+    sheet.addEventListener("click", (e) => {
+      const cell = e.target.closest("td[data-edit]");
+      if (!cell || cell.querySelector("input, select")) return;
+      // A link in the cell should still open the record rather than start an edit.
+      if (e.target.closest("a")) return;
+      edit(cell);
+    });
   }
 })();

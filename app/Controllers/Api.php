@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\Audit;
+use App\Libraries\SheetEdit;
 use App\Libraries\Visibility;
 use App\Models\CompanyModel;
 use App\Models\ContactModel;
@@ -100,5 +101,44 @@ class Api extends BaseController
         }
 
         return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'error' => 'Cannot create that here.']);
+    }
+
+    /**
+     * Save one cell of the sheet.
+     *
+     * Kept thin on purpose: everything that decides what may change, and what a value is
+     * allowed to be, lives in App\Libraries\SheetEdit, because the sheet is the one place
+     * a record is edited without its form and those rules must not drift apart.
+     */
+    public function sheetUpdate(string $kind)
+    {
+        $entities = ['contacts' => 'CONTACT', 'companies' => 'COMPANY', 'deals' => 'DEAL'];
+        $entity = $entities[$kind] ?? null;
+
+        if ($entity === null) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'error' => 'Unknown record type.']);
+        }
+
+        $body = $this->jsonBody();
+        $id = (int) ($body['id'] ?? 0);
+        $field = (string) ($body['field'] ?? '');
+        $value = (string) ($body['value'] ?? '');
+
+        if ($id <= 0 || $field === '') {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => 'Nothing to save.']);
+        }
+
+        $result = SheetEdit::apply($this->me, $entity, $id, $field, $value);
+
+        if (! $result['ok']) {
+            // 422 rather than 400: the request was well formed, the value was not.
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => $result['error']]);
+        }
+
+        return $this->response->setJSON([
+            'ok'      => true,
+            'display' => $result['display'],
+            'value'   => $result['value'],
+        ]);
     }
 }

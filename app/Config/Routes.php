@@ -66,6 +66,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $r) {
 
     $r->get('api/search/(:segment)', 'Api::search/$1');
     $r->post('api/quick-create/(:segment)', 'Api::quickCreate/$1');
+    $r->post('api/sheet/(:segment)', 'Api::sheetUpdate/$1');
     $r->get('export/(:segment)', 'Export::run/$1');
 
     $r->group('settings', ['filter' => 'admin', 'namespace' => 'App\Controllers\Settings'], static function (RouteCollection $s) {

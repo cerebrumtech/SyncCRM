@@ -13,20 +13,20 @@ $dash = fn ($v) => $v !== null && $v !== '' ? esc($v) : '<span class="muted">—
 $num  = fn ($v) => $v !== null && $v !== '' ? esc(format_inr($v)) : '<span class="muted">—</span>';
 $cols = [
   ['key' => 'name',      'label' => 'Company',   'render' => fn ($c) => '<a href="/companies/' . $c['id'] . '" class="font-medium text-primary hover:underline">' . esc($c['name']) . '</a>'],
-  ['key' => 'industry',  'label' => 'Industry',  'render' => fn ($c) => $dash($c['industry'] ?? null)],
-  ['key' => 'city',      'label' => 'City',      'render' => fn ($c) => $dash($c['city'] ?? null)],
-  ['key' => 'district',  'label' => 'District',  'render' => fn ($c) => $dash($c['district'] ?? null)],
-  ['key' => 'state',     'label' => 'State',     'render' => fn ($c) => $dash($c['state'] ?? null)],
-  ['key' => 'phone',     'label' => 'Phone',     'class' => 'tabular', 'render' => fn ($c) => $dash($c['phone'] ?? null)],
-  ['key' => 'alt',       'label' => 'Alt phone', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['alt_phone'] ?? null)],
-  ['key' => 'email',     'label' => 'Email',     'render' => fn ($c) => $dash($c['email'] ?? null)],
-  ['key' => 'website',   'label' => 'Website',   'render' => fn ($c) => $dash($c['website'] ?? null)],
-  ['key' => 'branches',  'label' => 'Branches',  'class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['branches'] ?? null)],
-  ['key' => 'deposits',  'label' => 'Deposits (Cr)', 'class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['deposits_cr'] ?? null)],
-  ['key' => 'loanbook',  'label' => 'Loan book (Cr)','class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['loan_book_cr'] ?? null)],
-  ['key' => 'loancust',  'label' => 'Loan customers','class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['loan_customers'] ?? null)],
+  ['key' => 'industry',  'label' => 'Industry',  'edit' => 'industry', 'render' => fn ($c) => $dash($c['industry'] ?? null)],
+  ['key' => 'city',      'label' => 'City',      'edit' => 'city', 'render' => fn ($c) => $dash($c['city'] ?? null)],
+  ['key' => 'district',  'label' => 'District',  'edit' => 'district', 'render' => fn ($c) => $dash($c['district'] ?? null)],
+  ['key' => 'state',     'label' => 'State',     'edit' => 'state', 'render' => fn ($c) => $dash($c['state'] ?? null)],
+  ['key' => 'phone',     'label' => 'Phone',     'edit' => 'phone', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['phone'] ?? null)],
+  ['key' => 'alt',       'label' => 'Alt phone', 'edit' => 'alt_phone', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['alt_phone'] ?? null)],
+  ['key' => 'email',     'label' => 'Email',     'edit' => 'email', 'render' => fn ($c) => $dash($c['email'] ?? null)],
+  ['key' => 'website',   'label' => 'Website',   'edit' => 'website', 'render' => fn ($c) => $dash($c['website'] ?? null)],
+  ['key' => 'branches',  'label' => 'Branches',  'edit' => 'branches', 'class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['branches'] ?? null)],
+  ['key' => 'deposits',  'label' => 'Deposits (Cr)', 'edit' => 'deposits_cr', 'class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['deposits_cr'] ?? null)],
+  ['key' => 'loanbook',  'label' => 'Loan book (Cr)','edit' => 'loan_book_cr', 'class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['loan_book_cr'] ?? null)],
+  ['key' => 'loancust',  'label' => 'Loan customers','edit' => 'loan_customers', 'class' => 'text-right tabular', 'render' => fn ($c) => $dash($c['loan_customers'] ?? null)],
   ['key' => 'tags',      'label' => 'Tags',      'render' => fn ($c) => $c['tags'] ? tag_badges(array_slice($c['tags'], 0, 4)) : '<span class="muted">—</span>'],
-  ['key' => 'owner',     'label' => 'Owner',     'render' => fn ($c) => $c['owner_name'] ? esc($c['owner_name']) : '<span class="muted">Unassigned</span>'],
+  ['key' => 'owner',     'label' => 'Owner',     'edit' => 'owner_id', 'render' => fn ($c) => $c['owner_name'] ? esc($c['owner_name']) : '<span class="muted">Unassigned</span>'],
   ['key' => 'contacts',  'label' => 'Contacts',  'class' => 'text-right tabular', 'render' => fn ($c) => (int) $c['contact_count']],
   ['key' => 'opendeals', 'label' => 'Open deals','class' => 'text-right tabular', 'render' => fn ($c) => (int) $c['open_deal_count']],
   ['key' => 'updated',   'label' => 'Updated',   'class' => 'text-xs muted', 'render' => fn ($c) => relative_time($c['updated_at'])],
@@ -40,7 +40,8 @@ foreach ($defs as $d) {
     }];
 }
 ?>
-<?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'COMPANY']) ?>
+<?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'COMPANY', 'kind' => 'companies', 'me' => $me,
+    'canEdit' => fn ($r) => \App\Libraries\Permissions::canEditRecord($me, 'COMPANY', $r)]) ?>
 <?= view('partials/pagination', ['total' => $total, 'page' => $page, 'perPage' => $perPage]) ?>
 <?php else: ?>
 <div class="card overflow-x-auto"><table class="table" data-testid="companies-table">

@@ -50,21 +50,21 @@ $extra .= '<div class="ml-auto">' . view('partials/view_toggle', ['toggleViews' 
 $dash = fn ($v) => $v !== null && $v !== '' ? esc($v) : '<span class="muted">—</span>';
 $cols = [
   ['key' => 'title',    'label' => 'Deal',      'render' => fn ($d) => '<a href="/deals/' . $d['id'] . '" class="font-medium text-primary hover:underline">' . esc($d['title']) . '</a>'],
-  ['key' => 'company',  'label' => 'Company',   'render' => fn ($d) => $dash($d['company_name'] ?? null)],
-  ['key' => 'contact',  'label' => 'Contact',   'render' => fn ($d) => $dash(trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? '')) ?: null)],
-  ['key' => 'stage',    'label' => 'Stage',     'render' => fn ($d) => esc($d['stage_name'])],
+  ['key' => 'company',  'label' => 'Company',   'edit' => 'company_id', 'render' => fn ($d) => $dash($d['company_name'] ?? null)],
+  ['key' => 'contact',  'label' => 'Contact',   'edit' => 'contact_id', 'render' => fn ($d) => $dash(trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? '')) ?: null)],
+  ['key' => 'stage',    'label' => 'Stage',     'edit' => 'stage_id', 'render' => fn ($d) => esc($d['stage_name'])],
   ['key' => 'pipeline', 'label' => 'Pipeline',  'render' => fn ($d) => esc($d['pipeline_name'])],
   ['key' => 'status',   'label' => 'Status',    'render' => fn ($d) => deal_status_badge($d['status'])],
-  ['key' => 'amount',   'label' => 'Amount',    'class' => 'text-right tabular', 'render' => fn ($d) => format_inr($d['amount'])],
-  ['key' => 'proposal', 'label' => 'Proposal',  'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['proposal_amount']) && $d['proposal_amount'] !== null ? format_inr($d['proposal_amount']) : '<span class="muted">—</span>'],
-  ['key' => 'received', 'label' => 'Received',  'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['amount_received']) && $d['amount_received'] !== null ? format_inr($d['amount_received']) : '<span class="muted">—</span>'],
-  ['key' => 'pending',  'label' => 'Pending',   'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['amount_pending']) && $d['amount_pending'] !== null ? format_inr($d['amount_pending']) : '<span class="muted">—</span>'],
+  ['key' => 'amount',   'label' => 'Amount',    'edit' => 'amount', 'class' => 'text-right tabular', 'render' => fn ($d) => format_inr($d['amount'])],
+  ['key' => 'proposal', 'label' => 'Proposal',  'edit' => 'proposal_amount', 'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['proposal_amount']) && $d['proposal_amount'] !== null ? format_inr($d['proposal_amount']) : '<span class="muted">—</span>'],
+  ['key' => 'received', 'label' => 'Received',  'edit' => 'amount_received', 'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['amount_received']) && $d['amount_received'] !== null ? format_inr($d['amount_received']) : '<span class="muted">—</span>'],
+  ['key' => 'pending',  'label' => 'Pending',   'edit' => 'amount_pending', 'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['amount_pending']) && $d['amount_pending'] !== null ? format_inr($d['amount_pending']) : '<span class="muted">—</span>'],
   ['key' => 'prob',     'label' => 'Probability','class' => 'text-right tabular', 'render' => fn ($d) => (int) $d['probability'] . '%'],
-  ['key' => 'close',    'label' => 'Expected close', 'render' => fn ($d) => $d['expected_close_date'] ? format_date($d['expected_close_date']) : '<span class="muted">—</span>'],
+  ['key' => 'close',    'label' => 'Expected close', 'edit' => 'expected_close_date', 'render' => fn ($d) => $d['expected_close_date'] ? format_date($d['expected_close_date']) : '<span class="muted">—</span>'],
   ['key' => 'closed',   'label' => 'Closed',    'render' => fn ($d) => $d['closed_at'] ? format_date($d['closed_at']) : '<span class="muted">—</span>'],
-  ['key' => 'source',   'label' => 'Lead source','render' => fn ($d) => $dash($d['lead_source'] ?? null)],
+  ['key' => 'source',   'label' => 'Lead source','edit' => 'lead_source', 'render' => fn ($d) => $dash($d['lead_source'] ?? null)],
   ['key' => 'lost',     'label' => 'Lost reason','render' => fn ($d) => $dash($d['lost_reason'] ?? null)],
-  ['key' => 'owner',    'label' => 'Owner',     'render' => fn ($d) => $d['owner_name'] ? esc($d['owner_name']) : '<span class="muted">Unassigned</span>'],
+  ['key' => 'owner',    'label' => 'Owner',     'edit' => 'owner_id', 'render' => fn ($d) => $d['owner_name'] ? esc($d['owner_name']) : '<span class="muted">Unassigned</span>'],
   ['key' => 'updated',  'label' => 'Updated',   'class' => 'text-xs muted', 'render' => fn ($d) => relative_time($d['updated_at'])],
 ];
 foreach ($defs as $df) {
@@ -76,7 +76,8 @@ foreach ($defs as $df) {
     }];
 }
 ?>
-  <?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'DEAL']) ?>
+  <?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'DEAL', 'kind' => 'deals', 'me' => $me,
+    'canEdit' => fn ($r) => \App\Libraries\Permissions::canEditRecord($me, 'DEAL', $r)]) ?>
   <?= view('partials/pagination', ['total' => $total, 'page' => $page, 'perPage' => $perPage]) ?>
   <?php endif ?>
 <?php else: ?>

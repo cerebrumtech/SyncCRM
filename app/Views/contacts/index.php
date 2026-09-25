@@ -12,14 +12,18 @@
 $dash = fn ($v) => $v !== null && $v !== '' ? esc($v) : '<span class="muted">—</span>';
 $cols = [
   ['key' => 'name',    'label' => 'Name',     'render' => fn ($c) => '<a href="/contacts/' . $c['id'] . '" class="font-medium text-primary hover:underline">' . esc(full_name($c)) . '</a>'],
-  ['key' => 'company', 'label' => 'Company',  'render' => fn ($c) => $c['company_id'] ? '<a href="/companies/' . $c['company_id'] . '" class="hover:text-primary">' . esc($c['company_name']) . '</a>' : '<span class="muted">—</span>'],
-  ['key' => 'title',   'label' => 'Job title','render' => fn ($c) => $dash($c['job_title'] ?? null)],
-  ['key' => 'phone',   'label' => 'Phone',    'class' => 'tabular', 'render' => fn ($c) => $dash($c['phone'] ?? null)],
-  ['key' => 'wa',      'label' => 'WhatsApp', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['whatsapp_number'] ?? null)],
-  ['key' => 'alt',     'label' => 'Alt phone','class' => 'tabular', 'render' => fn ($c) => $dash($c['alt_phone'] ?? null)],
-  ['key' => 'email',   'label' => 'Email',    'render' => fn ($c) => $dash($c['email'] ?? null)],
+  // Name stays a link so you can still open the record; the two halves of it are
+  // their own editable columns, because that is how the data is actually stored.
+  ['key' => 'first',   'label' => 'First name', 'edit' => 'first_name', 'render' => fn ($c) => $dash($c['first_name'] ?? null)],
+  ['key' => 'last',    'label' => 'Last name',  'edit' => 'last_name',  'render' => fn ($c) => $dash($c['last_name'] ?? null)],
+  ['key' => 'company', 'label' => 'Company',  'edit' => 'company_id', 'render' => fn ($c) => $c['company_id'] ? '<a href="/companies/' . $c['company_id'] . '" class="hover:text-primary">' . esc($c['company_name']) . '</a>' : '<span class="muted">—</span>'],
+  ['key' => 'title',   'label' => 'Job title','edit' => 'job_title', 'render' => fn ($c) => $dash($c['job_title'] ?? null)],
+  ['key' => 'phone',   'label' => 'Phone',    'edit' => 'phone', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['phone'] ?? null)],
+  ['key' => 'wa',      'label' => 'WhatsApp', 'edit' => 'whatsapp_number', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['whatsapp_number'] ?? null)],
+  ['key' => 'alt',     'label' => 'Alt phone','edit' => 'alt_phone', 'class' => 'tabular', 'render' => fn ($c) => $dash($c['alt_phone'] ?? null)],
+  ['key' => 'email',   'label' => 'Email',    'edit' => 'email', 'render' => fn ($c) => $dash($c['email'] ?? null)],
   ['key' => 'tags',    'label' => 'Tags',     'render' => fn ($c) => $c['tags'] ? tag_badges(array_slice($c['tags'], 0, 4)) : '<span class="muted">—</span>'],
-  ['key' => 'owner',   'label' => 'Owner',    'render' => fn ($c) => $c['owner_name'] ? esc($c['owner_name']) : '<span class="muted">Unassigned</span>'],
+  ['key' => 'owner',   'label' => 'Owner',    'edit' => 'owner_id', 'render' => fn ($c) => $c['owner_name'] ? esc($c['owner_name']) : '<span class="muted">Unassigned</span>'],
   ['key' => 'deals',   'label' => 'Deals',    'class' => 'text-right tabular', 'render' => fn ($c) => (int) $c['deal_count']],
   ['key' => 'created', 'label' => 'Created',  'class' => 'text-xs muted', 'render' => fn ($c) => format_date($c['created_at'] ?? null)],
   ['key' => 'updated', 'label' => 'Updated',  'class' => 'text-xs muted', 'render' => fn ($c) => relative_time($c['updated_at'])],
@@ -33,7 +37,8 @@ foreach ($defs as $d) {
     }];
 }
 ?>
-<?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'CONTACT']) ?>
+<?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'CONTACT', 'kind' => 'contacts', 'me' => $me,
+    'canEdit' => fn ($r) => \App\Libraries\Permissions::canEditRecord($me, 'CONTACT', $r)]) ?>
 <?= view('partials/pagination', ['total' => $total, 'page' => $page, 'perPage' => $perPage]) ?>
 <?php else: ?>
 <div class="card overflow-x-auto"><table class="table" data-testid="contacts-table">
