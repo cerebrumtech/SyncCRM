@@ -3,7 +3,7 @@
 <?php $link = fn (array $o) => '/activities' . query_with($o + ['page' => '']); ?>
 <?= view('partials/page_header', ['title' => 'Activities', 'subtitle' => 'Tasks, calls and meetings across your contacts, companies and deals.', 'actions' =>
   '<div class="flex rounded-md border border-line bg-white p-0.5 text-[13px]"><a class="rounded px-3 py-1 ' . ($view === 'list' ? 'bg-navy text-white' : 'text-ink-700') . '" href="' . esc($link(['view' => 'list']), 'attr') . '">List</a><a class="rounded px-3 py-1 ' . ($view === 'calendar' ? 'bg-navy text-white' : 'text-ink-700') . '" href="' . esc($link(['view' => 'calendar']), 'attr') . '">Calendar</a></div>' . view('partials/activity_quick', ['linked' => []])]) ?>
-<form class="mb-4 flex flex-wrap items-center gap-2" method="get">
+<form class="mb-4 flex flex-wrap items-center gap-2" method="get" data-instant-filter>
   <input type="hidden" name="view" value="<?= $view ?>">
   <?php if ($view === 'list'): ?>
     <div class="flex rounded-md border border-line bg-white p-0.5 text-[13px]" data-testid="range-tabs">
@@ -17,7 +17,7 @@
   <?php endif ?>
   <select class="select w-36" name="type"><option value="">All types</option><option value="TASK"<?= selected_if($type === 'TASK') ?>>Tasks</option><option value="CALL"<?= selected_if($type === 'CALL') ?>>Calls</option><option value="EVENT"<?= selected_if($type === 'EVENT') ?>>Meetings</option></select>
   <select class="select w-44" name="assignee"><option value="me"<?= selected_if($assignee === 'me') ?>>Assigned to me</option><option value="all"<?= selected_if($assignee === 'all') ?>>Everyone</option><?php foreach ($users as $u): ?><option value="<?= $u['id'] ?>"<?= selected_if((string) $assignee === (string) $u['id']) ?>><?= esc($u['name']) ?></option><?php endforeach ?></select>
-  <button class="btn btn-secondary" type="submit">Apply</button>
+  <button class="btn btn-secondary" type="submit" data-apply>Apply</button>
 </form>
 <?php if ($view === 'list'): ?>
   <div class="card card-pad"><?= view('partials/activity_list', ['items' => $rows, 'showLinks' => true, 'emptyText' => $range === 'overdue' ? 'Nothing overdue. Nice.' : 'No activities in this view.']) ?></div>
@@ -42,4 +42,5 @@
 <?php endif ?>
 <?= view('partials/activity_dialog', ['linked' => []]) ?>
 <?php if (! empty($focus)): ?><div hidden data-focus-activity="<?= (int) $focus ?>"></div><?php endif ?>
+<?php if (! empty($p['new'])): ?><div hidden data-auto-open="activity-dialog"></div><?php endif ?>
 <?= $this->endSection() ?>

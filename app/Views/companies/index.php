@@ -27,4 +27,5 @@
   <?= view('companies/_form', ['company' => null]) ?>
   <div class="mt-2 flex justify-end gap-2"><button type="button" class="btn btn-secondary" data-close>Cancel</button><button class="btn btn-primary" type="submit">Create company</button></div>
 </form></dialog>
+<?php if (! empty($p['new'])): ?><div hidden data-auto-open="company-dialog"></div><?php endif ?>
 <?= $this->endSection() ?>

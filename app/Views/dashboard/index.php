@@ -2,11 +2,11 @@
 <?= $this->section('content') ?>
 <?php $who = $owner ? ($userMap[$owner]['name'] ?? 'the team') : 'the team'; ?>
 <?= view('partials/page_header', ['title' => 'Dashboard', 'subtitle' => 'Welcome back, ' . $me['name'] . ". Here's how " . $who . ' is doing ' . strtolower($ranges[$range]) . '.']) ?>
-<form class="mb-5 flex flex-wrap items-center gap-2" method="get">
+<form class="mb-5 flex flex-wrap items-center gap-2" method="get" data-instant-filter>
   <select class="select w-44" name="pipeline"><?php foreach ($pipelines as $pl): ?><option value="<?= $pl['id'] ?>"<?= selected_if($pipeline && $pl['id'] === $pipeline['id']) ?>><?= esc($pl['name']) ?></option><?php endforeach ?></select>
   <select class="select w-40" name="range"><?php foreach ($ranges as $k => $l): ?><option value="<?= $k ?>"<?= selected_if($range === $k) ?>><?= $l ?></option><?php endforeach ?></select>
   <select class="select w-44" name="owner"><option value="">Everyone</option><?php foreach ($users as $u): ?><option value="<?= $u['id'] ?>"<?= selected_if($owner === $u['id']) ?>><?= esc($u['name']) ?></option><?php endforeach ?></select>
-  <button class="btn btn-secondary" type="submit">Apply</button>
+  <button class="btn btn-secondary" type="submit" data-apply>Apply</button>
 </form>
 <div class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" data-testid="stats">
   <a class="stat hover:border-primary/40" href="/deals?<?= $qs(['view' => 'list', 'status' => 'OPEN']) ?>"><div class="stat-label">Open pipeline · <?= esc($pipeline['name'] ?? '') ?></div><div class="stat-value"><?= format_compact_inr($openValue) ?></div><div class="text-xs muted"><?= $openCount ?> open deal<?= $openCount === 1 ? '' : 's' ?></div></a>
