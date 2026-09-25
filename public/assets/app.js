@@ -75,6 +75,7 @@
     if (auto) openDialog(auto.getAttribute("data-auto-open"));
     if (location.hash) { const tab = $('[data-tab="' + location.hash.slice(1) + '"]'); if (tab) tab.click(); }
     $$("[data-picker]").forEach(initPicker);
+    $$("[data-sheet]").forEach(initSheet);
     $$("[data-kanban]").forEach(initKanban);
     $$("[data-line-items]").forEach(initLineItems);
     $$("[data-stage-select]").forEach(initStageSelect);
@@ -133,6 +134,33 @@
       sq.setSelectionRange(sq.value.length, sq.value.length);
     }
   });
+
+  // Sheet view: which columns are shown is a per-browser preference, not something worth a
+  // round trip or a column on users. Hidden columns are hidden in place so the sticky first
+  // column and the header keep lining up.
+  function initSheet(root) {
+    const key = "sheet-cols:" + root.getAttribute("data-sheet");
+    const boxes = $$("[data-sheet-col]");
+    let hidden = [];
+    try { hidden = JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { hidden = []; }
+    const apply = () => {
+      boxes.forEach((b) => {
+        const col = b.getAttribute("data-sheet-col");
+        const off = hidden.indexOf(col) !== -1;
+        b.checked = !off;
+        $$('[data-col="' + col + '"]', root).forEach((cell) => (cell.hidden = off));
+      });
+    };
+    apply();
+    boxes.forEach((b) => b.addEventListener("change", () => {
+      const col = b.getAttribute("data-sheet-col");
+      const at = hidden.indexOf(col);
+      if (b.checked && at !== -1) hidden.splice(at, 1);
+      if (!b.checked && at === -1) hidden.push(col);
+      try { localStorage.setItem(key, JSON.stringify(hidden)); } catch (e) {}
+      apply();
+    }));
+  }
 
   // Record picker: <div data-picker="/api/search/contacts" data-name="contact_id" data-value="12" data-label="Priya Shah">
   function initPicker(root) {

@@ -9,6 +9,11 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-25
 
+- **CRM-40** `feature` Sheet view for Contacts — a dense spreadsheet grid beside the list, with
+  a sticky header, a sticky first column and thirteen columns including your own custom fields.
+  Read-only for now. It draws the same rows the list does, so filters, search, saved views and
+  per-user visibility all still apply. Which columns you show is remembered in your browser.
+
 - **CRM-42** `improvement` The CSV importer now hands out a template. Step 1 has a download for
   contacts and for companies, each carrying every heading the importer understands — custom
   fields included — and one example row showing how tags are separated and how an owner is
