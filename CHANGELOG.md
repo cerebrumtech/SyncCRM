@@ -9,6 +9,15 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-25
 
+- **CRM-39** `improvement` Filter bars apply themselves. A dropdown takes effect the moment it
+  changes and a search box half a second after you stop typing, so the Apply button is gone.
+  It is only hidden, not removed, so the bars still work without JavaScript.
+
+- **CRM-39** `improvement` A top bar on every screen, not just phones. A **New** button starts
+  a Deal, Contact, Company or Activity from wherever you are, and a bell shows how much of your
+  own work is due today or already late. `?new=1` now opens the create dialog on all four
+  screens, not only Deals.
+
 - **CRM-38** `feature` A deal now names the products it sells. The new-deal dialog lists the
   catalogue and will not save without at least one; each product picked becomes a line item at
   its catalogue price and tax. An amount typed by hand still wins, and left blank the deal is
