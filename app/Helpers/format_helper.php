@@ -191,6 +191,25 @@ function money($v): float
     return is_numeric($v) ? round((float) $v, 2) : 0.0;
 }
 
+/**
+ * The largest value a money column holds. Every one of them is decimal(14,2), which is
+ * twelve digits before the point. Anything larger used to reach MySQL and come back as
+ * "Out of range value", which surfaced as a 500 and threw the user out of the app.
+ */
+const MAX_MONEY = 999999999999.99;
+
+/** True when $v is a number this application can actually store in a money column. */
+function money_in_range($v): bool
+{
+    return is_numeric($v) && (float) $v >= 0 && (float) $v <= MAX_MONEY;
+}
+
+/** "999,999,999,999.99" - for telling the user what the limit is. */
+function max_money_label(): string
+{
+    return number_format(MAX_MONEY, 2);
+}
+
 function file_size_label(int $bytes): string
 {
     if ($bytes >= 1048576) {

@@ -25,7 +25,7 @@
   <div class="grid gap-3 sm:grid-cols-2">
     <div class="field sm:col-span-2"><label class="label" for="pname">Name *</label><input class="input" id="pname" name="name" value="<?= old_or('name') ?>" required autofocus></div>
     <div class="field"><label class="label" for="psku">SKU</label><input class="input" id="psku" name="sku" value="<?= old_or('sku') ?>"></div>
-    <div class="field"><label class="label" for="pprice">Price (₹, excl. GST)</label><input class="input" id="pprice" name="price" type="number" min="0" step="0.01" value="<?= old_or('price') ?>" required></div>
+    <div class="field"><label class="label" for="pprice">Price (₹, excl. GST)</label><input class="input" id="pprice" name="price" type="number" max="999999999999.99" min="0" step="0.01" value="<?= old_or('price') ?>" required></div>
     <div class="field"><label class="label" for="ptax">GST %</label><input class="input" id="ptax" name="tax_rate" type="number" min="0" max="100" step="0.01" value="<?= old_or('tax_rate', '18') ?>"></div>
     <div class="field flex items-end"><label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_active" checked> Active</label></div>
     <div class="field sm:col-span-2"><label class="label" for="pdesc">Description</label><textarea class="textarea" id="pdesc" name="description"><?= old_or('description') ?></textarea></div>
