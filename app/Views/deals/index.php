@@ -1,6 +1,6 @@
 <?= $this->extend('layouts/app') ?>
 <?= $this->section('content') ?>
-<?php $isBoard = $view === 'board'; $qs = fn (array $o) => query_with($o); ?>
+<?php $isBoard = $view === 'board'; $isSheet = $view === 'sheet'; $qs = fn (array $o) => query_with($o); ?>
 <?= view('partials/page_header', ['title' => 'Deals', 'subtitle' => $pipeline ? $pipeline['name'] . ' pipeline · ' . $total . ' deal' . ($total === 1 ? '' : 's') : 'No pipeline yet', 'actions' => '<button class="btn btn-primary" data-open="deal-dialog">' . icon('plus') . 'New deal</button>']) ?>
 <?= view('partials/saved_views', ['entity' => 'DEAL', 'views' => $views, 'exportHref' => '/export/deals']) ?>
 <?php
@@ -14,7 +14,7 @@ if (! $isBoard) {
     foreach ($pipeline['stages'] ?? [] as $s) { $extra .= '<option value="' . $s['id'] . '"' . selected_if(($p['stage'] ?? '') == $s['id']) . '>' . esc($s['name']) . '</option>'; }
     $extra .= '</select>';
 }
-$extra .= '<div class="ml-auto flex rounded-md border border-line bg-white p-0.5"><a class="rounded px-2 py-1 text-xs font-medium ' . ($isBoard ? 'bg-navy text-white' : 'text-ink-700') . '" href="' . esc($qs(['view' => '', 'page' => '', 'status' => '', 'stage' => '']), 'attr') . '">' . icon('columns', 'inline h-3.5 w-3.5') . ' Board</a><a class="rounded px-2 py-1 text-xs font-medium ' . (! $isBoard ? 'bg-navy text-white' : 'text-ink-700') . '" href="' . esc($qs(['view' => 'list']), 'attr') . '">' . icon('list', 'inline h-3.5 w-3.5') . ' List</a></div>';
+$extra .= '<div class="ml-auto">' . view('partials/view_toggle', ['toggleViews' => ['' => 'Board', 'list' => 'List', 'sheet' => 'Sheet'], 'current' => $isBoard ? '' : $view]) . '</div>';
 ?>
 <?= view('partials/list_toolbar', ['p' => $p, 'users' => $users, 'tags' => $tags, 'extra' => $extra]) ?>
 
@@ -44,6 +44,41 @@ $extra .= '<div class="ml-auto flex rounded-md border border-line bg-white p-0.5
       </div>
     <?php endforeach ?>
   </div>
+<?php elseif ($isSheet): ?>
+  <?php if (! $rows): ?><div class="empty">No deals match.</div><?php else: ?>
+<?php
+$dash = fn ($v) => $v !== null && $v !== '' ? esc($v) : '<span class="muted">—</span>';
+$cols = [
+  ['key' => 'title',    'label' => 'Deal',      'render' => fn ($d) => '<a href="/deals/' . $d['id'] . '" class="font-medium text-primary hover:underline">' . esc($d['title']) . '</a>'],
+  ['key' => 'company',  'label' => 'Company',   'render' => fn ($d) => $dash($d['company_name'] ?? null)],
+  ['key' => 'contact',  'label' => 'Contact',   'render' => fn ($d) => $dash(trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? '')) ?: null)],
+  ['key' => 'stage',    'label' => 'Stage',     'render' => fn ($d) => esc($d['stage_name'])],
+  ['key' => 'pipeline', 'label' => 'Pipeline',  'render' => fn ($d) => esc($d['pipeline_name'])],
+  ['key' => 'status',   'label' => 'Status',    'render' => fn ($d) => deal_status_badge($d['status'])],
+  ['key' => 'amount',   'label' => 'Amount',    'class' => 'text-right tabular', 'render' => fn ($d) => format_inr($d['amount'])],
+  ['key' => 'proposal', 'label' => 'Proposal',  'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['proposal_amount']) && $d['proposal_amount'] !== null ? format_inr($d['proposal_amount']) : '<span class="muted">—</span>'],
+  ['key' => 'received', 'label' => 'Received',  'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['amount_received']) && $d['amount_received'] !== null ? format_inr($d['amount_received']) : '<span class="muted">—</span>'],
+  ['key' => 'pending',  'label' => 'Pending',   'class' => 'text-right tabular', 'render' => fn ($d) => isset($d['amount_pending']) && $d['amount_pending'] !== null ? format_inr($d['amount_pending']) : '<span class="muted">—</span>'],
+  ['key' => 'prob',     'label' => 'Probability','class' => 'text-right tabular', 'render' => fn ($d) => (int) $d['probability'] . '%'],
+  ['key' => 'close',    'label' => 'Expected close', 'render' => fn ($d) => $d['expected_close_date'] ? format_date($d['expected_close_date']) : '<span class="muted">—</span>'],
+  ['key' => 'closed',   'label' => 'Closed',    'render' => fn ($d) => $d['closed_at'] ? format_date($d['closed_at']) : '<span class="muted">—</span>'],
+  ['key' => 'source',   'label' => 'Lead source','render' => fn ($d) => $dash($d['lead_source'] ?? null)],
+  ['key' => 'lost',     'label' => 'Lost reason','render' => fn ($d) => $dash($d['lost_reason'] ?? null)],
+  ['key' => 'owner',    'label' => 'Owner',     'render' => fn ($d) => $d['owner_name'] ? esc($d['owner_name']) : '<span class="muted">Unassigned</span>'],
+  ['key' => 'updated',  'label' => 'Updated',   'class' => 'text-xs muted', 'render' => fn ($d) => relative_time($d['updated_at'])],
+];
+foreach ($defs as $df) {
+    $k = $df['field_key'];
+    $cols[] = ['key' => 'cf_' . $k, 'label' => $df['label'], 'render' => function ($d) use ($k, $dash) {
+        $cf = is_array($d['custom_fields'] ?? null) ? $d['custom_fields'] : json_decode((string) ($d['custom_fields'] ?? ''), true);
+        $v = is_array($cf) ? ($cf[$k] ?? null) : null;
+        return $dash(is_bool($v) ? ($v ? 'Yes' : 'No') : $v);
+    }];
+}
+?>
+  <?= view('partials/sheet', ['cols' => $cols, 'rows' => $rows, 'entity' => 'DEAL']) ?>
+  <?= view('partials/pagination', ['total' => $total, 'page' => $page, 'perPage' => $perPage]) ?>
+  <?php endif ?>
 <?php else: ?>
   <?php if (! $rows): ?><div class="empty">No deals match.</div><?php else: ?>
   <div class="card overflow-x-auto"><table class="table" data-testid="deals-table">

@@ -33,8 +33,9 @@ class Companies extends BaseController
             $r['tags'] = $r['tags'] ? json_decode($r['tags'], true) : [];
         }
         $industries = array_column(db_connect()->table('companies')->select('industry')->distinct()->where('organization_id', $this->orgId())->where('industry IS NOT NULL')->orderBy('industry')->get()->getResultArray(), 'industry');
+        $view = ($p['view'] ?? '') === 'sheet' ? 'sheet' : 'list';
         return $this->render('companies/index', [
-            'title' => 'Companies', 'rows' => $rows, 'total' => $total, 'page' => $page, 'perPage' => self::PER_PAGE, 'p' => $p, 'industries' => $industries,
+            'title' => 'Companies', 'rows' => $rows, 'total' => $total, 'page' => $page, 'perPage' => self::PER_PAGE, 'p' => $p, 'industries' => $industries, 'view' => $view,
             'users' => Lists::activeUsers($this->orgId()), 'tags' => Tags::names($this->orgId()), 'defs' => CustomFields::defs($this->orgId(), 'COMPANY'),
             'views' => Lists::savedViews($this->orgId(), 'COMPANY', $this->me['id']),
         ]);

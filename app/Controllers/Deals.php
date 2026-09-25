@@ -43,7 +43,8 @@ class Deals extends BaseController
         $p = $this->request->getGet();
         $pipelines = DealLib::pipelines($this->orgId());
         $pipeline = $this->pipelineFrom($pipelines, $p['pipeline'] ?? null);
-        $view = ($p['view'] ?? 'board') === 'list' ? 'list' : 'board';
+        $asked = $p['view'] ?? 'board';
+        $view = in_array($asked, ['list', 'sheet'], true) ? $asked : 'board';
         $common = [
             'title' => 'Deals', 'p' => $p, 'pipelines' => $pipelines, 'pipeline' => $pipeline, 'view' => $view,
             'users' => Lists::activeUsers($this->orgId()), 'tags' => Tags::names($this->orgId()), 'defs' => CustomFields::defs($this->orgId(), 'DEAL'),
@@ -53,7 +54,7 @@ class Deals extends BaseController
         if (! $pipeline) {
             return $this->render('deals/index', $common + ['rows' => [], 'total' => 0, 'page' => 1, 'perPage' => self::PER_PAGE, 'columns' => []]);
         }
-        if ($view === 'list') {
+        if ($view === 'list' || $view === 'sheet') {
             $page = max(1, (int) ($p['page'] ?? 1));
             $q = $p + ['pipeline' => $pipeline['id']];
             if (! isset($p['pipeline']) || $p['pipeline'] === '') {
