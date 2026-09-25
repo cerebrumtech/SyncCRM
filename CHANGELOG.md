@@ -9,6 +9,13 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-25
 
+- **CRM-42** `improvement` The CSV importer now hands out a template. Step 1 has a download for
+  contacts and for companies, each carrying every heading the importer understands — custom
+  fields included — and one example row showing how tags are separated and how an owner is
+  matched. The file carries a UTF-8 byte-order mark so Excel does not mangle Devanagari society
+  names, and its headings are ones the column matcher recognises, so an untouched template maps
+  itself.
+
 - **CRM-41** `improvement` A contact or company missing from a deal's picker can now be created
   from the picker itself — "+ Add contact…" with whatever you have typed — instead of abandoning
   the deal to go and make it. Only a name is taken; the rest belongs on the record's own page.
