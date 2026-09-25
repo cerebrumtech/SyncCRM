@@ -147,6 +147,9 @@ class Deals extends BaseController
         if (! is_numeric($amountRaw) || (float) $amountRaw < 0) {
             $this->fail("Amount can't be negative");
         }
+        if (! money_in_range($amountRaw)) {
+            $this->fail('Amount is too large. The most this field holds is ' . max_money_label() . '.');
+        }
         $contactId = $this->intOrNull('contact_id');
         $companyId = $this->intOrNull('company_id');
         if ($contactId) {
@@ -329,6 +332,11 @@ class Deals extends BaseController
                 $tax = (float) ($it['tax_rate'] ?? 0);
                 if ($qty < 0 || $price < 0 || $disc < 0 || $disc > 100 || $tax < 0 || $tax > 100) {
                     $this->fail('Line item ' . ($i + 1) . ' has an invalid number.');
+                }
+                // unit_price and the total it produces are both decimal(14,2). Catch an
+                // oversized figure here rather than letting MySQL reject the row with a 500.
+                if ($price > MAX_MONEY || DealLib::lineTotal($qty, $price, $disc, $tax) > MAX_MONEY) {
+                    $this->fail('Line item ' . ($i + 1) . ' comes to more than ' . max_money_label() . '.');
                 }
                 $pid = ! empty($it['product_id']) ? (int) $it['product_id'] : null;
                 if ($pid) {

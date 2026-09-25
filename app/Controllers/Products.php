@@ -35,6 +35,9 @@ class Products extends BaseController
         $sku = $this->str('sku', 60);
         $price = $this->str('price') ?? '0';
         $tax = $this->str('tax_rate') ?? '0';
+        if (is_numeric($price) && (float) $price > MAX_MONEY) {
+            $this->fail('Price is too large. The most this field holds is ' . max_money_label() . '.');
+        }
         if (! is_numeric($price) || (float) $price < 0) {
             $this->fail("Price can't be negative");
         }
