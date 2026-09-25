@@ -9,6 +9,11 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-25
 
+- **CRM-40** `feature` Sheet view for Companies and Deals as well. Companies shows branches,
+  deposits, loan book and loan customers; Deals shows proposal, received and pending, none of
+  which the list view has ever displayed. Deals now has three views — Board, List and Sheet.
+  Activities is not included yet; its list is grouped rather than paged and needs its own work.
+
 - **CRM-40** `feature` Sheet view for Contacts — a dense spreadsheet grid beside the list, with
   a sticky header, a sticky first column and thirteen columns including your own custom fields.
   Read-only for now. It draws the same rows the list does, so filters, search, saved views and
