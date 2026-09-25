@@ -94,6 +94,7 @@ $routes->group('', ['filter' => 'auth'], static function (RouteCollection $r) {
         $s->post('fields/(:num)', 'Fields::update/$1');
         $s->post('fields/(:num)/delete', 'Fields::delete/$1');
         $s->get('import', 'Import::index');
+        $s->get('import/sample/(:segment)', 'Import::sample/$1');
         $s->post('import/upload', 'Import::upload');
         $s->post('import/run', 'Import::run');
         $s->get('organization', 'Organization::index');

@@ -35,6 +35,54 @@ class Import extends BaseController
         return $t;
     }
 
+    /**
+     * A starter CSV: the headings this importer understands, plus one example row so the
+     * shape of the fiddly ones is obvious - how tags are separated, what an owner is
+     * matched on, which date format is read.
+     *
+     * Written with a UTF-8 byte-order mark. Without it Excel opens the file as Windows-1252
+     * and the Devanagari society names come back as mojibake, which is exactly the mistake
+     * this file exists to prevent.
+     */
+    public function sample(string $entity)
+    {
+        $entity = strtoupper($entity) === 'COMPANY' ? 'COMPANY' : 'CONTACT';
+        $targets = $this->targets($entity);
+        $example = $entity === 'CONTACT'
+            ? ['first_name' => 'Sunita', 'last_name' => 'Kale', 'email' => 'sunita@example.com',
+               'phone' => '9876543210', 'whatsapp_number' => '9876543210', 'job_title' => 'Chairman',
+               'company_name' => 'Shivneri Nagari Sahakari Patsanstha',
+               'owner_email' => $this->me['email'], 'tags' => 'decision-maker;priority']
+            : ['name' => 'Shivneri Nagari Sahakari Patsanstha', 'industry' => 'Co-operative Credit Society',
+               'website' => 'https://example.com', 'phone' => '02012345678', 'email' => 'office@example.com',
+               'address_line' => 'Main Road', 'city' => 'Pune', 'state' => 'Maharashtra',
+               'postal_code' => '411001', 'country' => 'India', 'description' => 'Notes about this society',
+               'owner_email' => $this->me['email'], 'tags' => 'priority'];
+
+        $head = [];
+        $row  = [];
+        foreach ($targets as $key => $label) {
+            // The heading has to be one guess() recognises, or every column of the file we
+            // just handed out would land on "Skip". So drop the parenthetical hint from the
+            // label - "Tags (; separated)" becomes "Tags" - and let the example value carry
+            // the format instead.
+            $head[] = trim(preg_replace('/\s*\(.*$/', '', $label));
+            $row[]  = $example[$key] ?? '';
+        }
+        $fh = fopen('php://temp', 'r+');
+        fputcsv($fh, $head);
+        fputcsv($fh, $row);
+        rewind($fh);
+        $csv = chr(0xEF) . chr(0xBB) . chr(0xBF) . stream_get_contents($fh);
+        fclose($fh);
+        $name = 'synccrm-' . strtolower($entity) . '-template.csv';
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $name . '"')
+            ->setBody($csv);
+    }
+
     public function index()
     {
         $pending = session()->get('import');
