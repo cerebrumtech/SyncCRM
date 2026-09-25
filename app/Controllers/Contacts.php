@@ -37,8 +37,11 @@ class Contacts extends BaseController
             $co = model(CompanyModel::class)->findInOrg($this->orgId(), (int) $prefill['company_id']);
             $prefill['company_name'] = $co['name'] ?? '';
         }
+        // Sheet is a third way to look at the same rows - same query, same filters, same
+        // visibility - so nothing below changes except how they are drawn.
+        $view = ($p['view'] ?? '') === 'sheet' ? 'sheet' : 'list';
         return $this->render('contacts/index', [
-            'title' => 'Contacts', 'rows' => $rows, 'total' => $total, 'page' => $page, 'perPage' => self::PER_PAGE, 'p' => $p,
+            'title' => 'Contacts', 'rows' => $rows, 'total' => $total, 'page' => $page, 'perPage' => self::PER_PAGE, 'p' => $p, 'view' => $view,
             'users' => Lists::activeUsers($this->orgId()), 'tags' => Tags::names($this->orgId()), 'defs' => CustomFields::defs($this->orgId(), 'CONTACT'),
             'views' => Lists::savedViews($this->orgId(), 'CONTACT', $this->me['id']), 'prefill' => $prefill,
         ]);
