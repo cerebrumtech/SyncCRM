@@ -9,6 +9,13 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ## 2026-09-25
 
+- **CRM-38** `feature` A deal now names the products it sells. The new-deal dialog lists the
+  catalogue and will not save without at least one; each product picked becomes a line item at
+  its catalogue price and tax. An amount typed by hand still wins, and left blank the deal is
+  valued from the products chosen. "Line items" is now **Products** throughout. Existing deals
+  are untouched: 409 of them were imported as enquiries with no product recorded anywhere, and
+  there is nothing to backfill them from without inventing figures.
+
 - **CRM-37** `bug` A large enough amount on a deal produced "Something went wrong" and left
   the user on a bare error page, which read as being signed out. The session was never
   touched — that page simply has no navigation on it. Every money column is `decimal(14,2)`,
