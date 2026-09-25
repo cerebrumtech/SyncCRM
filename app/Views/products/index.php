@@ -1,10 +1,10 @@
 <?= $this->extend('layouts/app') ?>
 <?= $this->section('content') ?>
 <?= view('partials/page_header', ['title' => 'Products', 'subtitle' => 'Catalogue used for deal line items. Prices exclude GST.', 'actions' => $isAdmin ? '<button class="btn btn-primary" data-open="product-dialog" data-action="/products" data-fill=\'{"_title":"New product","name":"","sku":"","price":"","tax_rate":"18","description":"","is_active":true}\'>' . icon('plus') . 'New product</button>' : '']) ?>
-<form class="mb-4 flex flex-wrap gap-2" method="get">
+<form class="mb-4 flex flex-wrap gap-2" method="get" data-instant-filter>
   <input class="input w-64" name="q" placeholder="Search name or SKU" value="<?= esc($p['q'] ?? '', 'attr') ?>">
   <select class="select w-36" name="status"><?php foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $k => $l): ?><option value="<?= $k ?>"<?= selected_if(($p['status'] ?? 'active') === $k) ?>><?= $l ?></option><?php endforeach ?></select>
-  <button class="btn btn-secondary" type="submit">Apply</button>
+  <button class="btn btn-secondary" type="submit" data-apply>Apply</button>
   <a class="btn btn-secondary ml-auto" href="/export/products"><?= icon('download') ?> Export CSV</a>
 </form>
 <?php if (! $rows): ?><div class="empty">No products yet.</div><?php else: ?>

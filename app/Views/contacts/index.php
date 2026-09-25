@@ -31,4 +31,5 @@
   <?= view('contacts/_form', ['contact' => null, 'company' => null]) ?>
   <div class="mt-2 flex justify-end gap-2"><button type="button" class="btn btn-secondary" data-close>Cancel</button><button class="btn btn-primary" type="submit">Create contact</button></div>
 </form></dialog>
+<?php if (! empty($p['new'])): ?><div hidden data-auto-open="contact-dialog"></div><?php endif ?>
 <?= $this->endSection() ?>

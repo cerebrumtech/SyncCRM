@@ -109,6 +109,29 @@
 
     $$("[data-check-all]").forEach((cb) => cb.addEventListener("change", () => $$(cb.getAttribute("data-check-all")).forEach((x) => (x.checked = cb.checked))));
     $$("[data-submit-on-change]").forEach((el) => el.addEventListener("change", () => el.form && el.form.requestSubmit()));
+
+    // Filter bars apply themselves. A select applies at once; a text box waits until typing
+    // stops, so every keystroke is not a page load. The Apply button stays in the markup and
+    // is hidden here, so the form still works if this script never runs.
+    $$("form[data-instant-filter]").forEach((form) => {
+      $$("[data-apply]", form).forEach((b) => (b.hidden = true));
+      let timer = null;
+      form.addEventListener("change", (e) => {
+        if (e.target.matches("select, input[type=date], input[type=checkbox], input[type=radio]")) form.requestSubmit();
+      });
+      form.addEventListener("input", (e) => {
+        if (!e.target.matches("input[type=text], input[type=search], input:not([type])")) return;
+        clearTimeout(timer);
+        timer = setTimeout(() => form.requestSubmit(), 500);
+      });
+      form.addEventListener("keydown", (e) => { if (e.key === "Enter") clearTimeout(timer); });
+    });
+    // The reload loses focus mid-search, so put the caret back where it was.
+    const sq = $("form[data-instant-filter] input[name=q]");
+    if (sq && sq.value && new URLSearchParams(location.search).has("q")) {
+      sq.focus();
+      sq.setSelectionRange(sq.value.length, sq.value.length);
+    }
   });
 
   // Record picker: <div data-picker="/api/search/contacts" data-name="contact_id" data-value="12" data-label="Priya Shah">

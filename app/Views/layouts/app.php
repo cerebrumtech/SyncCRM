@@ -13,6 +13,11 @@ if (\App\Libraries\Permissions::isAdmin($me)) {
     $nav[] = ['href' => '/settings', 'label' => 'Settings', 'icon' => 'settings'];
 }
 $path = '/' . ltrim(service('request')->getUri()->getPath(), '/');
+// What the bell reports: this user's own open tasks that are due today or already late.
+$dueCount = (int) (db_connect()->table('activities')
+    ->where('organization_id', $me['organization_id'])->where('assignee_id', $me['id'])
+    ->where('status', 'OPEN')->where('due_at <', date('Y-m-d 23:59:59'))
+    ->countAllResults());
 ?>
 <!doctype html>
 <html lang="en">
@@ -50,9 +55,28 @@ $path = '/' . ltrim(service('request')->getUri()->getPath(), '/');
     </div>
   </aside>
   <div class="flex min-w-0 flex-1 flex-col">
-    <header class="flex h-12 items-center gap-3 border-b border-line-100 bg-white px-4 md:hidden">
-      <button class="btn btn-ghost btn-sm" data-toggle-sidebar><?= icon('menu') ?></button>
-      <span class="font-semibold text-navy">SyncCRM</span>
+    <header class="flex h-12 items-center gap-3 border-b border-line-100 bg-white px-4">
+      <button class="btn btn-ghost btn-sm md:hidden" data-toggle-sidebar><?= icon('menu') ?></button>
+      <span class="font-semibold text-navy md:hidden">SyncCRM</span>
+      <form class="relative hidden w-72 md:block" method="get" action="/contacts">
+        <span class="pointer-events-none absolute left-2.5 top-2 text-ink-500"><?= icon('search') ?></span>
+        <input class="input pl-8" name="q" placeholder="Search contacts…" aria-label="Search contacts">
+      </form>
+      <div class="ml-auto flex items-center gap-2">
+        <div class="relative">
+          <button class="btn btn-primary btn-sm" data-dropdown data-testid="quick-add" title="Create"><?= icon('plus') ?><span class="hidden sm:inline">New</span></button>
+          <div class="dropdown right-0" hidden>
+            <a href="/deals?new=1"><?= icon('deals') ?>Deal</a>
+            <a href="/contacts?new=1"><?= icon('contacts') ?>Contact</a>
+            <a href="/companies?new=1"><?= icon('companies') ?>Company</a>
+            <a href="/activities?new=1"><?= icon('activities') ?>Activity</a>
+          </div>
+        </div>
+        <a class="btn btn-ghost btn-sm relative" href="/activities?range=overdue&assignee=me" title="Work due or overdue" data-testid="due-bell">
+          <?= icon('alert') ?>
+          <?php if ($dueCount > 0): ?><span class="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-4 text-white"><?= $dueCount > 99 ? '99+' : $dueCount ?></span><?php endif ?>
+        </a>
+      </div>
     </header>
     <main class="mx-auto w-full max-w-[1800px] flex-1 px-4 py-5 md:px-6">
       <?= view('partials/flash') ?>
