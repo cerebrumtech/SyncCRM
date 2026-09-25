@@ -7,6 +7,19 @@ Dates are the date the work landed, in Asia/Kolkata.
 
 ---
 
+## 2026-09-25
+
+- **CRM-37** `bug` A large enough amount on a deal produced "Something went wrong" and left
+  the user on a bare error page, which read as being signed out. The session was never
+  touched — that page simply has no navigation on it. Every money column is `decimal(14,2)`,
+  so the most any of them holds is ₹999,999,999,999.99; the amount was checked for being
+  numeric and not negative, but never for fitting. Anything larger reached MySQL and came
+  back as an unhandled "Out of range value". The deal amount, the product price and each
+  line item (including the total it produces) are now checked first, and an oversized figure
+  is refused with an ordinary form error instead of a 500.
+
+---
+
 ## 2026-09-24
 
 - **CRM-36** `feature` `risk-schema` A user can now be limited to the records they own.
