@@ -48,6 +48,7 @@ class Deals extends BaseController
             'title' => 'Deals', 'p' => $p, 'pipelines' => $pipelines, 'pipeline' => $pipeline, 'view' => $view,
             'users' => Lists::activeUsers($this->orgId()), 'tags' => Tags::names($this->orgId()), 'defs' => CustomFields::defs($this->orgId(), 'DEAL'),
             'views' => Lists::savedViews($this->orgId(), 'DEAL', $this->me['id']), 'lostReasons' => Defaults::LOST_REASONS, 'prefill' => $this->prefill($p),
+            'products' => model(ProductModel::class)->where('organization_id', $this->orgId())->where('is_active', 1)->orderBy('name')->findAll(),
         ];
         if (! $pipeline) {
             return $this->render('deals/index', $common + ['rows' => [], 'total' => 0, 'page' => 1, 'perPage' => self::PER_PAGE, 'columns' => []]);
@@ -182,9 +183,35 @@ class Deals extends BaseController
                 $this->fail('To be in "' . $stage['name'] . '" a deal needs: ' . implode(', ', $missing) . '.');
             }
             $status = DealLib::statusFor($stage);
-            $data += ['organization_id' => $this->orgId(), 'status' => $status, 'closed_at' => $status === 'OPEN' ? null : now_sql(), 'position' => DealLib::nextPosition($stage['id']), 'amount_is_manual' => true];
+            // A deal is a product sale, so it must name at least one product. Existing deals
+            // imported as enquiries have none and are left alone; this applies to new ones.
+            $chosen = array_values(array_unique(array_filter(array_map('intval', (array) $this->request->getPost('products')))));
+            $catalogue = $chosen
+                ? model(ProductModel::class)->where('organization_id', $this->orgId())->where('is_active', 1)->whereIn('id', $chosen)->findAll()
+                : [];
+            if (! $catalogue) {
+                $this->fail('Pick at least one product. A deal records the sale of a product.');
+            }
+            // An amount typed by hand wins; left blank, it is the sum of the products picked.
+            $typed = trim((string) ($this->request->getPost('amount') ?? ''));
+            $manual = $typed !== '' && (float) $typed > 0;
+            $sum = 0.0;
+            foreach ($catalogue as $pr) {
+                $sum += DealLib::lineTotal(1, (float) $pr['price'], 0, (float) $pr['tax_rate']);
+            }
+            if (! $manual) {
+                $data['amount'] = round(min($sum, MAX_MONEY), 2);
+            }
+            $data += ['organization_id' => $this->orgId(), 'status' => $status, 'closed_at' => $status === 'OPEN' ? null : now_sql(), 'position' => DealLib::nextPosition($stage['id']), 'amount_is_manual' => $manual];
             $data['owner_id'] ??= $this->me['id'];
             $id = model(DealModel::class)->insert($data);
+            foreach (array_values($catalogue) as $i => $pr) {
+                model(DealLineItemModel::class)->insert([
+                    'deal_id' => $id, 'product_id' => $pr['id'], 'name' => $pr['name'], 'quantity' => 1,
+                    'unit_price' => $pr['price'], 'discount_percent' => 0, 'tax_rate' => $pr['tax_rate'],
+                    'total' => DealLib::lineTotal(1, (float) $pr['price'], 0, (float) $pr['tax_rate']), 'position' => $i,
+                ]);
+            }
             Tags::ensure($this->orgId(), $data['tags']);
             Audit::log($this->me, 'create', 'DEAL', $id, $data['title'], null, $data + ['stage' => $stage['name']]);
             return $this->ok('Deal created.', '/deals/' . $id);
@@ -324,19 +351,19 @@ class Deals extends BaseController
             foreach (array_values($items) as $i => $it) {
                 $name = trim((string) ($it['name'] ?? ''));
                 if ($name === '') {
-                    $this->fail('Line item ' . ($i + 1) . ' needs a name');
+                    $this->fail('Product ' . ($i + 1) . ' needs a name');
                 }
                 $qty = (float) ($it['quantity'] ?? 1);
                 $price = (float) ($it['unit_price'] ?? 0);
                 $disc = (float) ($it['discount_percent'] ?? 0);
                 $tax = (float) ($it['tax_rate'] ?? 0);
                 if ($qty < 0 || $price < 0 || $disc < 0 || $disc > 100 || $tax < 0 || $tax > 100) {
-                    $this->fail('Line item ' . ($i + 1) . ' has an invalid number.');
+                    $this->fail('Product ' . ($i + 1) . ' has an invalid number.');
                 }
                 // unit_price and the total it produces are both decimal(14,2). Catch an
                 // oversized figure here rather than letting MySQL reject the row with a 500.
                 if ($price > MAX_MONEY || DealLib::lineTotal($qty, $price, $disc, $tax) > MAX_MONEY) {
-                    $this->fail('Line item ' . ($i + 1) . ' comes to more than ' . max_money_label() . '.');
+                    $this->fail('Product ' . ($i + 1) . ' comes to more than ' . max_money_label() . '.');
                 }
                 $pid = ! empty($it['product_id']) ? (int) $it['product_id'] : null;
                 if ($pid) {
@@ -361,7 +388,7 @@ class Deals extends BaseController
             model(DealModel::class)->update($id, ['amount_is_manual' => ! $fromItems] + ($fromItems ? ['amount' => $sum] : []));
             $db->transComplete();
             Audit::log($this->me, 'update_line_items', 'DEAL', $id, $deal['title'], ['amount' => $deal['amount']], ['items' => count($rows), 'amount' => $fromItems ? $sum : $deal['amount']]);
-            return redirect()->to('/deals/' . $id . '#items')->with('success', 'Line items saved.');
+            return redirect()->to('/deals/' . $id . '#items')->with('success', 'Products saved.');
         });
     }
 }

@@ -35,6 +35,7 @@ await page.fill("#deal-dialog #title", `Deal ${N}`);
 await page.fill("#deal-dialog [data-picker][data-name=company_id] input[type=text]", "Acme");
 await page.waitForSelector("#deal-dialog [data-picker][data-name=company_id] .picker-list button");
 await page.locator("#deal-dialog [data-picker][data-name=company_id] .picker-list button").first().click();
+await page.locator('#deal-dialog input[name="products[]"]').first().check().catch(() => {});  // a deal needs a product
 await page.click("#deal-dialog button[type=submit]");
 await page.waitForURL("**/deals/*");
 const dealUrl = page.url(); const dealId = dealUrl.split("/").pop();

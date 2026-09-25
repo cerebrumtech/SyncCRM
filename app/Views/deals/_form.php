@@ -10,5 +10,19 @@
   <div class="field"><label class="label">Company</label><div data-picker="/api/search/companies" data-name="company_id" data-value="<?= esc(old('company_id') ?? $d['company_id'] ?? $prefill['company_id'] ?? '', 'attr') ?>" data-label="<?= esc(old('company_id') ? '' : ($company['name'] ?? $prefill['company_label'] ?? ''), 'attr') ?>" data-placeholder="Search companies…"></div></div>
   <div class="field"><label class="label" for="owner_id">Owner</label><select class="select" id="owner_id" name="owner_id"><?php $cur = old('owner_id') ?? $d['owner_id'] ?? $me['id']; foreach ($users as $u): ?><option value="<?= $u['id'] ?>"<?= selected_if((string) $cur === (string) $u['id']) ?>><?= esc($u['name']) ?></option><?php endforeach ?></select></div>
 </div>
+<?php if (empty($deal) && ! empty($products)): $chosen = (array) (old('products') ?? []); ?>
+<div class="field">
+  <label class="label">Products * <span class="muted">— a deal is a product sale, so pick at least one</span></label>
+  <div class="grid gap-2 sm:grid-cols-3" data-deal-products>
+  <?php foreach ($products as $pr): ?>
+    <label class="flex items-center gap-2 rounded border border-line px-3 py-2 text-[13px]">
+      <input type="checkbox" name="products[]" value="<?= $pr['id'] ?>"<?= in_array((string) $pr['id'], array_map('strval', $chosen), true) ? ' checked' : '' ?>>
+      <span><?= esc($pr['name']) ?><br><span class="muted"><?= format_inr($pr['price']) ?></span></span>
+    </label>
+  <?php endforeach ?>
+  </div>
+  <p class="mt-1 text-xs muted">Leave Amount blank and it is worked out from the products you pick.</p>
+</div>
+<?php endif ?>
 <?= view('partials/tag_input', ['tags' => $tags, 'value' => $d['tags'] ?? []]) ?>
 <?php if ($defs): ?><div class="grid gap-3 sm:grid-cols-2"><?= view('partials/custom_fields', ['defs' => $defs, 'values' => $d['custom_fields'] ?? []]) ?></div><?php endif ?>
