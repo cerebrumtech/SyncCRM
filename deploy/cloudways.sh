@@ -40,8 +40,12 @@ for c in php php8.3 php8.2 php8.1 php8.0 php7.4; do
 done
 [[ -n "$PHP" ]] || { echo "PHP 7.4 or newer is required." >&2; exit 1; }
 echo "Using $PHP ($("$PHP" -r 'echo PHP_VERSION;')) for install commands"
+# Asked of PHP directly rather than by grepping "php -m". Under `set -o pipefail`,
+# `grep -q` exits the moment it matches and closes the pipe; php then dies of SIGPIPE
+# and pipefail reports the whole pipeline as failed. That made this check fail at random
+# on roughly one deploy in eight, claiming an extension was missing when it was present.
 for ext in pdo_mysql mbstring json; do
-  "$PHP" -m | grep -qi "^${ext}$" || { echo "PHP extension '$ext' is missing. Enable it in the Cloudways panel." >&2; exit 1; }
+  "$PHP" -r "exit(extension_loaded('$ext') ? 0 : 1);" || { echo "PHP extension '$ext' is missing. Enable it in the Cloudways panel." >&2; exit 1; }
 done
 
 # --- stop the old Node.js deployment of SyncCRM, if this app ever ran it ---------------------
